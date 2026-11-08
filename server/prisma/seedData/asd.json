@@ -1,0 +1,401 @@
+{
+  "subject": {
+    "id": "asd-sub-001",
+    "name": "ASD (Advanced System Development)"
+  },
+  "topics": [
+    {
+      "id": "asd-top-req",
+      "name": "Requirements Analysis"
+    },
+    {
+      "id": "asd-top-arch",
+      "name": "System Architecture"
+    },
+    {
+      "id": "asd-top-vv",
+      "name": "Verification & Validation"
+    },
+    {
+      "id": "asd-top-iface",
+      "name": "Interface Management"
+    }
+  ],
+  "questions": [
+    {
+      "id": "asd-req-e1",
+      "topicId": "asd-top-req",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "Explain the fundamental difference between functional and non-functional requirements in defense avionics systems, providing one example of each.",
+      "idealAnswer": "Functional requirements define specific behaviors, inputs/outputs, and computational services (e.g., weapon release computation or missile trajectory calculation). Non-functional requirements specify quality attributes, environmental constraints, and operational standards such as latency, MTBF reliability, thermal tolerances, and MIL-STD compliance.",
+      "keywords": [
+        "functional requirements",
+        "non-functional requirements",
+        "avionics systems",
+        "system behavior",
+        "quality attributes"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-req-e2",
+      "topicId": "asd-top-req",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "What is a Concept of Operations (CONOPS), and why is it essential for deriving high-level military operational requirements?",
+      "idealAnswer": "A CONOPS is a formal user-oriented document describing how a proposed defense system will be deployed, operated, and maintained in realistic tactical scenarios. It establishes mission context, enabling systems engineers to trace end-user operational objectives directly into quantitative subsystem technical specifications.",
+      "keywords": [
+        "CONOPS",
+        "operational requirements",
+        "tactical scenarios",
+        "mission objectives",
+        "systems engineering"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-req-m1",
+      "topicId": "asd-top-req",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "How do you structure a Requirements Traceability Matrix (RTM) to ensure bidirectional traceability from operational requirements down to software units and verification test cases in a safety-critical mission system?",
+      "idealAnswer": "A bidirectional RTM maps forward from user operational requirements to system specifications, architectural components, software modules, and verification test cases, while mapping backward to verify every component and test traces to an approved source requirement. This eliminates orphan code and gold-plating, and enables rigorous change-impact analysis under DO-178C or military standards.",
+      "keywords": [
+        "requirements traceability matrix",
+        "bidirectional traceability",
+        "DO-178C",
+        "change impact analysis",
+        "verification test cases"
+      ],
+      "parentQId": "asd-req-e1"
+    },
+    {
+      "id": "asd-req-m2",
+      "topicId": "asd-top-req",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "When translating a CONOPS into safety-critical requirements for unmanned aerial vehicles (UAVs), how do you derive fail-safe and return-to-base (RTB) logic under GPS-denied and electronic jamming environments?",
+      "idealAnswer": "Engineers examine lost-link and hostile jamming operational scenarios in the CONOPS to specify deterministic autonomous states. Requirements must prescribe dead-reckoning using inertial navigation systems (INS) or visual odometry, automated terrain-referenced altitude hold, anti-jam link failovers, and autonomous return-to-base coordinates to preserve flight safety and mission integrity.",
+      "keywords": [
+        "fail-safe logic",
+        "return-to-base",
+        "GPS-denied navigation",
+        "inertial navigation",
+        "electronic warfare"
+      ],
+      "parentQId": "asd-req-e2"
+    },
+    {
+      "id": "asd-req-h1",
+      "topicId": "asd-top-req",
+      "difficulty": "HARD",
+      "levelTag": "TECHNICAL",
+      "questionText": "In hypersonic flight vehicle development, analyze how you resolve severely conflicting requirements between aerodynamic skin friction, thermal protection system (TPS) mass budgets, and RF antenna window transmission limits during atmospheric re-entry.",
+      "idealAnswer": "Resolving coupled hypersonic multi-physics trade-offs requires multi-disciplinary design optimization (MDO) across CFD, thermal, and electromagnetic domains. Engineers trade nose-bluntness (reducing peak stagnation heat flux at the cost of wave drag) against ceramic matrix composite (CMC) TPS mass budgets. Dielectric RF window placements are optimized where re-entry plasma sheath attenuation is lowest while maintaining structural thermal shielding.",
+      "keywords": [
+        "hypersonic flight",
+        "thermal protection system",
+        "MDO trade study",
+        "RF plasma attenuation",
+        "mass budget"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-arch-e1",
+      "topicId": "asd-top-arch",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "What are the primary advantages of adopting an Open Systems Architecture over a proprietary monolithic architecture in modern defense electronic systems?",
+      "idealAnswer": "Open Systems Architecture relies on open, standardized hardware and software interfaces (e.g., SOSA, POSIX, OpenVPX). This facilitates modular Line Replaceable Unit (LRU) upgrades, multi-vendor component interoperability, rapid technology insertion, life-cycle maintenance cost reduction, and complete avoidance of vendor lock-in.",
+      "keywords": [
+        "open systems architecture",
+        "vendor lock-in",
+        "subsystem interoperability",
+        "modular design",
+        "line replaceable unit"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-arch-e2",
+      "topicId": "asd-top-arch",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "Differentiate between active (hot) standby redundancy and passive (cold) standby redundancy in mission-critical embedded computing architectures.",
+      "idealAnswer": "In active (hot) standby redundancy, primary and secondary processors execute concurrently and maintain synchronized memory state, providing near-zero failover latency upon fault detection. In passive (cold) standby, the secondary processor remains unpowered or dormant until primary failure occurs, requiring spin-up and state reload time but saving electrical power and reducing component thermal wear.",
+      "keywords": [
+        "active redundancy",
+        "passive redundancy",
+        "hot standby",
+        "hitless failover",
+        "mission-critical systems"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-arch-m1",
+      "topicId": "asd-top-arch",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "Explain how the Modular Open Systems Approach (MOSA) guidelines are applied to decouple signal processing hardware from application algorithms in an active electronically scanned array (AESA) radar.",
+      "idealAnswer": "MOSA enforces standardized backplane form factors (OpenVPX/VITA) paired with vendor-neutral middleware abstractions (e.g., OMS, MORA, or OpenCL). This abstraction decouples complex beamforming and pulse Doppler algorithms from specific FPGA or GPU hardware modules, allowing COTS computing hardware to be upgraded without modifying validated radar processing software.",
+      "keywords": [
+        "MOSA",
+        "AESA radar",
+        "OpenVPX standard",
+        "hardware abstraction layer",
+        "technology insertion"
+      ],
+      "parentQId": "asd-arch-e1"
+    },
+    {
+      "id": "asd-arch-m2",
+      "topicId": "asd-top-arch",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "In a Triple Modular Redundant (TMR) flight control computer, how do you implement a hardware/software majority voter to isolate transient bit-flip faults caused by single event upsets (SEUs)?",
+      "idealAnswer": "A TMR voter continuously ingests synchronized outputs from three isolated channels running identical flight control tasks. A 2-out-of-3 majority voting algorithm determines output commands dispatched to flight surface actuators. If one lane diverges due to an SEU, the voter rejects that output, flags the anomalous lane for state realignment, and maintains uninterrupted flight control.",
+      "keywords": [
+        "triple modular redundancy",
+        "majority voter",
+        "single event upset",
+        "byzantine fault tolerance",
+        "flight control computer"
+      ],
+      "parentQId": "asd-arch-e2"
+    },
+    {
+      "id": "asd-arch-h1",
+      "topicId": "asd-top-arch",
+      "difficulty": "HARD",
+      "levelTag": "TECHNICAL",
+      "questionText": "Design a deterministic distributed architecture for real-time sensor fusion combining electro-optical, infrared, and radar streams with a strict latency budget under 5 milliseconds and zero packet loss over Time-Sensitive Networking (TSN).",
+      "idealAnswer": "The architecture incorporates IEEE 802.1Qbv Time-Aware Shapers (TAS) scheduling cyclic sensor streams across dedicated TSN time-slots over redundant Ethernet rings. Sensors ingest and tag packets with IEEE 802.1AS clock synchronization timestamps, dispatching data via OMG Data Distribution Service (DDS) using zero-copy ring buffers. Fusion algorithms run on partitioned RTOS cores executing extended Kalman filtering within bounded 3ms computational windows.",
+      "keywords": [
+        "time-sensitive networking",
+        "sensor fusion",
+        "IEEE 802.1AS",
+        "deterministic latency",
+        "RTOS scheduling",
+        "Kalman filtering"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-vv-e1",
+      "topicId": "asd-top-vv",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "Clarify the distinction between 'Verification' and 'Validation' within defense systems engineering using the V-model lifecycle.",
+      "idealAnswer": "Verification ('Are we building the product right?') evaluates whether interim engineering deliverables conform to specified technical requirements through design reviews, static analysis, unit tests, and integration tests. Validation ('Are we building the right product?') demonstrates that the complete, deployed system satisfies military operational requirements and end-user mission needs in realistic field environments.",
+      "keywords": [
+        "verification",
+        "validation",
+        "V-model lifecycle",
+        "systems engineering",
+        "operational trials"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-vv-e2",
+      "topicId": "asd-top-vv",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "What is the primary role of Environmental Stress Screening (ESS) and MIL-STD-810 testing in ruggedized defense hardware?",
+      "idealAnswer": "MIL-STD-810 establishes rigorous environmental test methods (thermal shock, vibration, explosive atmosphere, humidity, sand/dust) to certify product survivability under extreme operational conditions. ESS applies non-destructive thermal cycling and random vibration to manufactured production units to reveal latent component defects and infant mortality prior to field commissioning.",
+      "keywords": [
+        "MIL-STD-810",
+        "environmental stress screening",
+        "ruggedized hardware",
+        "thermal cycling",
+        "infant mortality screening"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-vv-m1",
+      "topicId": "asd-top-vv",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "Explain how Hardware-in-the-Loop (HIL) simulation bridges software testing and live firing trials for missile guidance, navigation, and control (GNC) algorithms.",
+      "idealAnswer": "HIL connects operational missile flight computers, sensors, and actuator hardware to a real-time flight simulator that models 6-DOF aerodynamics, target trajectory, and seeker kinematics. Closed-loop sensor emulation feeds realistic dynamics to onboard GNC algorithms, verifying real-time timing deadlines, actuator responses, and telemetry telemetry behavior under thousands of edge cases before expensive live firings.",
+      "keywords": [
+        "hardware-in-the-loop",
+        "missile guidance",
+        "GNC closed-loop",
+        "real-time simulation",
+        "actuator feedback"
+      ],
+      "parentQId": "asd-vv-e1"
+    },
+    {
+      "id": "asd-vv-m2",
+      "topicId": "asd-top-vv",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "In DO-178C Level A software verification, what is Modified Condition/Decision Coverage (MC/DC), and why is it mandatory for safety-critical flight code?",
+      "idealAnswer": "MC/DC is a white-box structural coverage metric requiring that every decision condition takes all possible outcomes, each entry/exit point is exercised, and every single condition has been shown to independently affect the decision's outcome. It provides exhaustive verification of boolean logic paths in flight-critical software without requiring the exponential test combinations of full multiple-condition coverage.",
+      "keywords": [
+        "DO-178C",
+        "MC/DC coverage",
+        "structural code coverage",
+        "flight-critical software",
+        "safety-critical assurance"
+      ],
+      "parentQId": "asd-vv-e2"
+    },
+    {
+      "id": "asd-vv-h1",
+      "topicId": "asd-top-vv",
+      "difficulty": "HARD",
+      "levelTag": "TECHNICAL",
+      "questionText": "Formulate a verification and airworthiness certification strategy for an airborne tactical decision aid incorporating non-deterministic deep neural network (DNN) object detection models.",
+      "idealAnswer": "Because deep neural networks lack traditional deterministic structural coverage paths, the certification strategy adheres to EASA/FAA AI guidelines (EUROCAE WG-114). The system wraps the DNN inside an accredited Simplex safety architecture with a deterministic rule-based monitor enforcing bounded flight envelopes. V&V incorporates training dataset representativeness metrics, formal adversarial robustness perturbation testing, runtime Out-of-Distribution (OOD) monitoring, and explainability heatmaps.",
+      "keywords": [
+        "airworthiness certification",
+        "deep neural networks",
+        "Simplex architecture",
+        "out-of-distribution detection",
+        "EUROCAE WG-114",
+        "safety monitor"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-iface-e1",
+      "topicId": "asd-top-iface",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "What is an Interface Control Document (ICD), and what critical physical, electrical, and logical information must it contain?",
+      "idealAnswer": "An ICD is a binding technical document defining agreements between interacting subsystems. It specifies physical constraints (dimensions, connectors, pinouts), electrical properties (voltages, signal levels, impedances, grounding), and logical data structures (message formats, bus protocols, timing sequences, and handshake error handling).",
+      "keywords": [
+        "interface control document",
+        "ICD specifications",
+        "pinout definitions",
+        "electrical characteristics",
+        "message format"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-iface-e2",
+      "topicId": "asd-top-iface",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "Compare the key architectural characteristics and typical defense use cases of MIL-STD-1553B bus versus ARINC 429.",
+      "idealAnswer": "MIL-STD-1553B is a dual-redundant, command-response, differential serial bus operating at 1 Mbps with a centralized Bus Controller managing up to 31 Remote Terminals, ideal for multi-subsystem tactical mission integration. ARINC 429 is a point-to-point or broadcast simplex bus (single transmitter, up to 20 receivers) sending 32-bit words at 12.5 or 100 kbps, standard for point-to-point navigation sensor links.",
+      "keywords": [
+        "MIL-STD-1553B",
+        "ARINC 429",
+        "bus controller",
+        "avionics serial bus",
+        "command-response protocol"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-iface-m1",
+      "topicId": "asd-top-iface",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "How do you manage version control, semantic versioning, and backward compatibility in an ICD when multiple independent defense contractors develop interacting subsystems?",
+      "idealAnswer": "Interface governance is managed through formal Engineering Change Proposals (ECPs) and an Interface Control Working Group (ICWG). Interfaces implement semantic versioning (Major.Minor.Patch) and ensure backward compatibility via extensible message framing (such as Protocol Buffers or TLV with reserved bytes), version-negotiation handshakes during power-up, and automated schema validation tests integrated into continuous integration pipelines.",
+      "keywords": [
+        "backward compatibility",
+        "interface control working group",
+        "engineering change proposal",
+        "schema validation",
+        "semantic versioning"
+      ],
+      "parentQId": "asd-iface-e1"
+    },
+    {
+      "id": "asd-iface-m2",
+      "topicId": "asd-top-iface",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "When designing a MIL-STD-1553B bus schedule for flight-critical telemetry, how do you handle bus bandwidth utilization and eliminate frame jitter among asynchronous sub-addresses?",
+      "idealAnswer": "The bus controller executes a static cyclic frame partitioned into fixed minor frames driven by hardware interrupt timers. High-rate periodic messages are pinned to dedicated time-slots, while asynchronous traffic is scheduled via polled status word service requests in reserved sub-frame slots. Bus loading is strictly maintained below 65-70% to ensure deterministic transmission and accommodate retry margins without jitter.",
+      "keywords": [
+        "MIL-STD-1553B scheduling",
+        "major frame",
+        "minor frame",
+        "jitter management",
+        "bandwidth allocation",
+        "asynchronous traffic"
+      ],
+      "parentQId": "asd-iface-e2"
+    },
+    {
+      "id": "asd-iface-h1",
+      "topicId": "asd-top-iface",
+      "difficulty": "HARD",
+      "levelTag": "TECHNICAL",
+      "questionText": "How do you resolve high-speed signal integrity degradation, differential skew, and EMI/EMC interference between high-throughput multi-gigabit radar transceiver backplanes and digital processing VPX chassis?",
+      "idealAnswer": "Engineers implement controlled 100-ohm differential impedance routing, intra-pair length matching within 5 mils, and high-frequency, low-loss dielectric laminates (e.g., Megtron 6). High-speed backplane connectors feature dedicated wafer ground blades between differential pairs. Chassis enclosure shielding incorporates beryllium copper fingerstock, conductive gaskets, continuous ground planes, and common-mode chokes to satisfy MIL-STD-461 EMI compliance.",
+      "keywords": [
+        "signal integrity",
+        "differential skew",
+        "EMI/EMC mitigation",
+        "MIL-STD-461",
+        "VPX backplane",
+        "controlled impedance"
+      ],
+      "parentQId": null
+    }
+  ],
+  "icebreakers": [
+    {
+      "id": "asd-ice-01",
+      "topicId": null,
+      "difficulty": "EASY",
+      "levelTag": "ICEBREAKER",
+      "questionText": "Could you briefly introduce yourself, highlighting your academic background, technical domains of expertise, and previous systems engineering project experience?",
+      "idealAnswer": "Candidate provides a well-structured summary of their academic credentials, hands-on engineering experience, core technical strengths in systems development, and practical defense or embedded software projects.",
+      "keywords": [
+        "professional background",
+        "systems engineering",
+        "academic credentials",
+        "technical competencies",
+        "project execution"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-ice-02",
+      "topicId": null,
+      "difficulty": "EASY",
+      "levelTag": "ICEBREAKER",
+      "questionText": "What motivates you to pursue a scientific career at DRDO, and how do you envision contributing to indigenous defense technologies under the Atmanirbhar Bharat initiative?",
+      "idealAnswer": "Candidate demonstrates clear enthusiasm for defense R&D, alignment with DRDO's mission of national strategic autonomy, and a goal-oriented vision for advancing self-reliant defense technological capabilities.",
+      "keywords": [
+        "DRDO mission",
+        "indigenous technology",
+        "Atmanirbhar Bharat",
+        "defense R&D",
+        "national security commitment"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "asd-ice-03",
+      "topicId": null,
+      "difficulty": "EASY",
+      "levelTag": "ICEBREAKER",
+      "questionText": "Describe a scenario where you encountered conflicting design constraints or stringent delivery deadlines in an engineering project. How did you prioritize and resolve the trade-offs?",
+      "idealAnswer": "Candidate articulates structured trade-off analysis, objective prioritization, effective team communication, stakeholder alignment, and practical conflict resolution under operational constraints.",
+      "keywords": [
+        "trade-off analysis",
+        "conflict resolution",
+        "deadline management",
+        "team collaboration",
+        "stakeholder negotiation"
+      ],
+      "parentQId": null
+    }
+  ]
+}
+

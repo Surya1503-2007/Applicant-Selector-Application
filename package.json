@@ -1,0 +1,20 @@
+{
+  "name": "rac-drdo-adaptive-interview-system",
+  "version": "1.0.0",
+  "description": "RAC DRDO Adaptive Interview System - Root Project Workspace",
+  "private": true,
+  "scripts": {
+    "db:migrate": "npm --prefix server run db:migrate",
+    "db:seed": "npm --prefix server run db:seed",
+    "db:reset": "npm --prefix server run db:reset",
+    "test:db": "npm --prefix server run test:db"
+  },
+  "keywords": [
+    "drdo",
+    "rac",
+    "adaptive-interview"
+  ],
+  "author": "RAC DRDO Development Team",
+  "license": "ISC"
+}
+

@@ -1,0 +1,114 @@
+// Prisma Schema for RAC DRDO Adaptive Interview System (Part 1)
+// Normalized Question Bank & Interview Session Foundation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Difficulty levels for interview questions
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+/// Categorization of question purpose and assessment domain
+enum LevelTag {
+  TECHNICAL
+  MANAGERIAL
+  ICEBREAKER
+}
+
+/// Subject domain being evaluated (e.g., ASD - Advanced System Development)
+model Subject {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  topics    Topic[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Core functional topic under a subject (e.g., Requirements Analysis, System Architecture)
+model Topic {
+  id        String     @id @default(uuid())
+  subjectId String
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name      String
+  questions Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([subjectId, name])
+}
+
+/// Single Question model supporting adaptive follow-ups, keywords, and difficulty tiers
+model Question {
+  id             String      @id @default(uuid())
+  topicId        String?
+  topic          Topic?      @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  difficulty     Difficulty
+  questionText   String      @db.Text
+  idealAnswer    String      @db.Text
+  keywords       String[]
+  parentQId      String?
+  parentQuestion Question?   @relation("QuestionFollowUps", fields: [parentQId], references: [id], onDelete: SetNull)
+  followUps      Question[]  @relation("QuestionFollowUps")
+  levelTag       LevelTag
+  responses      Response[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([topicId, difficulty])
+  @@index([parentQId])
+  @@index([difficulty])
+  @@index([levelTag])
+}
+
+/// Candidate interviewed for Scientist/Engineer posts at RAC DRDO
+model Candidate {
+  id              String    @id @default(uuid())
+  name            String
+  postApplied     String
+  experienceLevel String
+  sessions        Session[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+/// An interview session conducted for a candidate
+model Session {
+  id          String     @id @default(uuid())
+  candidateId String
+  candidate   Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  startTime   DateTime   @default(now())
+  endTime     DateTime?
+  responses   Response[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([candidateId])
+}
+
+/// Candidate's response to an individual question in an interview session
+model Response {
+  id               String    @id @default(uuid())
+  sessionId        String
+  session          Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Question  @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  answerText       String    @db.Text
+  relevancyScore   Float?
+  correctnessScore Float?
+  timestamp        DateTime  @default(now())
+
+  // Ensures a question cannot be asked more than once in the same session
+  @@unique([sessionId, questionId])
+  @@index([sessionId])
+  @@index([questionId])
+}
+
