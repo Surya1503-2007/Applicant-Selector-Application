@@ -1,8 +1,8 @@
 /**
  * @file seed.js
  * @description Database seeding script for RAC DRDO Adaptive Interview System.
- * Reads subject and question bank data from JSON seed files and populates
- * the database idempotently (running multiple times produces identical state).
+ * Reads subject, question bank, and job post skill data from JSON seed files and
+ * populates the database idempotently (running multiple times produces identical state).
  */
 
 const { PrismaClient } = require('@prisma/client');
@@ -13,8 +13,8 @@ const prisma = new PrismaClient();
 
 /**
  * Loads a JSON seed file from the seedData directory.
- * @param {string} filename - Filename of the seed data (e.g., 'asd.json').
- * @returns {object} Parsed JSON data.
+ * @param {string} filename - Filename of the seed data (e.g., 'asd.json', 'posts.json').
+ * @returns {object|Array} Parsed JSON data.
  */
 function loadSeedData(filename) {
   const filePath = path.join(__dirname, 'seedData', filename);
@@ -129,17 +129,71 @@ async function seedSubjectData(seedData) {
 }
 
 /**
+ * Seeds job posts and their associated required skills idempotently.
+ *
+ * @param {Array<object>} postsData - Array of post objects with nested skills.
+ * @returns {Promise<void>}
+ */
+async function seedPostsData(postsData) {
+  console.log(`\n--- Seeding Job Posts & Required Skills (${postsData.length} posts) ---`);
+
+  for (const post of postsData) {
+    const upsertedPost = await prisma.post.upsert({
+      where: { id: post.id },
+      update: {
+        title: post.title,
+        subjectId: post.subjectId,
+        level: post.level,
+      },
+      create: {
+        id: post.id,
+        title: post.title,
+        subjectId: post.subjectId,
+        level: post.level,
+      },
+    });
+    console.log(`✔ Post ready: "${upsertedPost.title}" (${upsertedPost.id})`);
+
+    for (const skill of post.skills) {
+      await prisma.postSkill.upsert({
+        where: {
+          postId_skillName: {
+            postId: upsertedPost.id,
+            skillName: skill.skillName,
+          },
+        },
+        update: {
+          weight: skill.weight,
+          isMandatory: skill.isMandatory,
+        },
+        create: {
+          postId: upsertedPost.id,
+          skillName: skill.skillName,
+          weight: skill.weight,
+          isMandatory: skill.isMandatory,
+        },
+      });
+    }
+    console.log(`  ✔ Seeded ${post.skills.length} skills for post: "${post.title}"`);
+  }
+}
+
+/**
  * Main seeding execution function.
  */
 async function main() {
   try {
     console.log('Initiating RAC DRDO Database Seeding...');
 
-    // Load and seed Advanced System Development (ASD)
+    // 1. Load and seed Advanced System Development (ASD) curriculum
     const asdData = loadSeedData('asd.json');
     await seedSubjectData(asdData);
 
-    console.log('\nSeeding completed successfully!');
+    // 2. Load and seed Posts & Required Skills
+    const postsData = loadSeedData('posts.json');
+    await seedPostsData(postsData);
+
+    console.log('\nAll seeding completed successfully!');
   } catch (error) {
     console.error('Error during database seeding:', error);
     process.exit(1);
@@ -149,4 +203,3 @@ async function main() {
 }
 
 main();
-

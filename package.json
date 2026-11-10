@@ -4,17 +4,19 @@
   "description": "RAC DRDO Adaptive Interview System - Root Project Workspace",
   "private": true,
   "scripts": {
+    "start": "npm --prefix server start",
     "db:migrate": "npm --prefix server run db:migrate",
     "db:seed": "npm --prefix server run db:seed",
     "db:reset": "npm --prefix server run db:reset",
-    "test:db": "npm --prefix server run test:db"
+    "test:db": "npm --prefix server run test:db",
+    "test:skillmatch": "npm --prefix server run test:skillmatch"
   },
   "keywords": [
     "drdo",
     "rac",
-    "adaptive-interview"
+    "adaptive-interview",
+    "skill-match"
   ],
   "author": "RAC DRDO Development Team",
   "license": "ISC"
 }
-

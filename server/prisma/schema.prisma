@@ -1,5 +1,6 @@
-// Prisma Schema for RAC DRDO Adaptive Interview System (Part 1)
-// Normalized Question Bank & Interview Session Foundation
+// Prisma Schema for RAC DRDO Adaptive Interview System
+// Part 1: Normalized Question Bank & Interview Session Foundation
+// Part 2: Skill-Match Suitability Engine
 
 generator client {
   provider = "prisma-client-js"
@@ -26,11 +27,12 @@ enum LevelTag {
 
 /// Subject domain being evaluated (e.g., ASD - Advanced System Development)
 model Subject {
-  id        String   @id @default(uuid())
-  name      String   @unique
+  id        String    @id @default(uuid())
+  name      String    @unique
   topics    Topic[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  posts     Post[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 /// Core functional topic under a subject (e.g., Requirements Analysis, System Architecture)
@@ -71,13 +73,15 @@ model Question {
 
 /// Candidate interviewed for Scientist/Engineer posts at RAC DRDO
 model Candidate {
-  id              String    @id @default(uuid())
-  name            String
-  postApplied     String
-  experienceLevel String
-  sessions        Session[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String             @id @default(uuid())
+  name              String
+  postApplied       String
+  experienceLevel   String
+  sessions          Session[]
+  skills            CandidateSkill[]
+  skillMatchResults SkillMatchResult[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
 /// An interview session conducted for a candidate
@@ -112,3 +116,64 @@ model Response {
   @@index([questionId])
 }
 
+// =========================================================================
+// PART 2: Skill-Match Suitability Models
+// =========================================================================
+
+/// Job opening / post at RAC DRDO (e.g. Scientist C - Advanced System Development)
+model Post {
+  id                String             @id @default(uuid())
+  title             String
+  subjectId         String
+  subject           Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  level             String
+  postSkills        PostSkill[]
+  skillMatchResults SkillMatchResult[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([subjectId])
+}
+
+/// Individual skill requirement defined for a post, with weighting and mandatory designation
+model PostSkill {
+  id          String   @id @default(uuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  skillName   String
+  weight      Int      // 1 to 5
+  isMandatory Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([postId, skillName])
+  @@index([postId])
+}
+
+/// Skill profile item claimed or verified for a candidate
+model CandidateSkill {
+  id          String    @id @default(uuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  skillName   String
+  createdAt   DateTime  @default(now())
+
+  @@unique([candidateId, skillName])
+  @@index([candidateId])
+}
+
+/// Persisted audit record of a candidate's skill match evaluation against a post
+model SkillMatchResult {
+  id           String    @id @default(uuid())
+  candidateId  String
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  postId       String
+  post         Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  matchPercent Float
+  band         String    // "STRONG" | "MODERATE" | "WEAK"
+  breakdown    Json      // Explainable per-skill details, strengths, gaps, missing mandatory
+  createdAt    DateTime  @default(now())
+
+  @@index([candidateId])
+  @@index([postId])
+}

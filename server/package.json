@@ -1,13 +1,15 @@
 {
   "name": "rac-interview-server",
   "version": "1.0.0",
-  "description": "RAC DRDO Adaptive Interview System - Backend Foundation & Question Bank (Part 1)",
+  "description": "RAC DRDO Adaptive Interview System - Backend Foundation, Question Bank & Skill-Match Module",
   "main": "src/services/questionService.js",
   "scripts": {
+    "start": "node src/server.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js",
     "db:reset": "prisma migrate reset --force",
-    "test:db": "node scripts/testDb.js"
+    "test:db": "node scripts/testDb.js",
+    "test:skillmatch": "node scripts/testSkillMatch.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -19,6 +21,7 @@
     "asd",
     "systems-engineering",
     "adaptive-interview",
+    "skill-match",
     "prisma",
     "postgresql"
   ],
@@ -26,7 +29,9 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^6.19.3",
-    "dotenv": "^18.0.9"
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "natural": "^8.2.6"
   },
   "devDependencies": {
     "prisma": "^6.19.3"

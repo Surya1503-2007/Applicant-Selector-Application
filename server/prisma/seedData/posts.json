@@ -1,0 +1,61 @@
+[
+  {
+    "id": "post-asd-sc-c",
+    "title": "Scientist 'C' - Advanced System Development",
+    "subjectId": "asd-sub-001",
+    "level": "Scientist 'C'",
+    "skills": [
+      {
+        "skillName": "Model-Based Systems Engineering (MBSE)",
+        "weight": 5,
+        "isMandatory": true
+      },
+      {
+        "skillName": "Requirements Analysis & Traceability",
+        "weight": 5,
+        "isMandatory": true
+      },
+      {
+        "skillName": "Verification and Validation (V&V)",
+        "weight": 5,
+        "isMandatory": true
+      },
+      {
+        "skillName": "MIL-STD-1553B Avionics Bus Architecture",
+        "weight": 4,
+        "isMandatory": true
+      },
+      {
+        "skillName": "Interface Control Document (ICD) Management",
+        "weight": 4,
+        "isMandatory": false
+      },
+      {
+        "skillName": "Real-Time Operating Systems (RTOS)",
+        "weight": 4,
+        "isMandatory": false
+      },
+      {
+        "skillName": "Hardware-in-the-Loop (HIL) Simulation",
+        "weight": 3,
+        "isMandatory": false
+      },
+      {
+        "skillName": "DO-178C Safety-Critical Software",
+        "weight": 3,
+        "isMandatory": false
+      },
+      {
+        "skillName": "Triple Modular Redundancy (TMR) & Fault Tolerance",
+        "weight": 3,
+        "isMandatory": false
+      },
+      {
+        "skillName": "Environmental Stress Screening (ESS) & MIL-STD-810",
+        "weight": 2,
+        "isMandatory": false
+      }
+    ]
+  }
+]
+
