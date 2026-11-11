@@ -9,7 +9,10 @@
     "db:seed": "npm --prefix server run db:seed",
     "db:reset": "npm --prefix server run db:reset",
     "test:db": "npm --prefix server run test:db",
-    "test:skillmatch": "npm --prefix server run test:skillmatch"
+    "test:skillmatch": "npm --prefix server run test:skillmatch",
+    "test:scorer": "npm --prefix server run test:scorer",
+    "calibrate:scorer": "npm --prefix server run calibrate:scorer",
+    "test:persistence": "npm --prefix server run test:persistence"
   },
   "keywords": [
     "drdo",

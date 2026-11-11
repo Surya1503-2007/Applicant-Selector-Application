@@ -4,6 +4,7 @@ AI-based adaptive interview and candidate screening platform designed for the **
 
 - **Part 1**: Database Foundation & Normalized Question Bank (Prisma + PostgreSQL)
 - **Part 2**: Skill-Match Suitability Engine & Candidate Screening API (Deterministic, Offline)
+- **Part 3**: Answer Scorer Engine, Calibration Suite & Response Scoring API (Deterministic, Offline)
 
 ---
 
@@ -11,12 +12,12 @@ AI-based adaptive interview and candidate screening platform designed for the **
 
 ```
 Applicant Selector Application/
-├── client/                     # Placeholder for React + Tailwind CSS UI (Part 3)
+├── client/                     # Placeholder for React + Tailwind CSS UI (future)
 │   └── README.md
 ├── server/                     # Node.js backend foundation & services
 │   ├── prisma/
 │   │   ├── migrations/         # Prisma migration history
-│   │   ├── schema.prisma       # Normalized schema (Parts 1 & 2 models)
+│   │   ├── schema.prisma       # Normalized schema (Parts 1, 2 & 3 models)
 │   │   ├── seed.js             # Idempotent seeder for curriculum & post skills
 │   │   └── seedData/
 │   │       ├── asd.json        # ASD curriculum question bank (20 questions + 3 icebreakers)
@@ -25,25 +26,36 @@ Applicant Selector Application/
 │   │   ├── app.js              # Express app setup & route mounting
 │   │   ├── server.js           # Express HTTP server entry point
 │   │   ├── config/
-│   │   │   └── skillMatchConfig.js # Score tiers, thresholds & suitability bands
+│   │   │   ├── skillMatchConfig.js # Part 2 score tiers, thresholds & suitability bands
+│   │   │   └── scorerConfig.js     # Part 3 weights, verdict thresholds & anti-gaming rules
 │   │   ├── data/
-│   │   │   └── skillSynonyms.json  # 35+ defence & systems engineering abbreviations/synonyms
+│   │   │   ├── skillSynonyms.json  # Defence & systems engineering abbreviations/synonyms
+│   │   │   └── sampleAnswers.json  # 25 labelled ASD answers (5 types x 5 questions)
 │   │   ├── db/
 │   │   │   └── prismaClient.js # Shared singleton Prisma Client instance
 │   │   ├── matchers/
 │   │   │   ├── logicMatcher.js     # 4-tier deterministic rule matcher
 │   │   │   └── embeddingMatcher.js # Swappable placeholder for dense vector matcher
+│   │   ├── scorers/
+│   │   │   ├── index.js            # Active scorer selector driven by scorerConfig.js
+│   │   │   ├── logicScorer.js      # Deterministic TF-IDF + keyword answer scorer
+│   │   │   └── embeddingScorer.js  # Swappable placeholder for dense embedding scorer
 │   │   ├── routes/
-│   │   │   └── skillMatchRoutes.js # Express API routes for skill match & skills ingestion
+│   │   │   ├── skillMatchRoutes.js # Express API routes for skill match & skills ingestion
+│   │   │   └── answerRoutes.js     # Express API route for POST /api/answers
 │   │   ├── services/
-│   │   │   ├── questionService.js  # Data-access methods for questions & follow-ups
-│   │   │   ├── sessionService.js   # Data-access methods for sessions & responses
-│   │   │   └── skillMatchService.js# Weighted scoring, bands & mandatory gap detection
+│   │   │   ├── questionService.js      # Data-access methods for questions & follow-ups
+│   │   │   ├── sessionService.js       # Data-access methods for sessions & responses
+│   │   │   ├── skillMatchService.js    # Weighted scoring, bands & mandatory gap detection
+│   │   │   └── answerScoringService.js # Part 3 evaluation & persistence orchestration
 │   │   └── utils/
-│   │       └── skillNormalizer.js  # Normalization, stemming & canonicalization
+│   │       └── skillNormalizer.js  # Normalization, synonym expansion, stopword removal & stemming
 │   ├── scripts/
-│   │   ├── testDb.js           # Part 1: Database relational test suite
-│   │   └── testSkillMatch.js   # Part 2: 4-scenario skill match test suite
+│   │   ├── testDb.js               # Part 1: Database relational test suite
+│   │   ├── testSkillMatch.js       # Part 2: 4-scenario skill match test suite
+│   │   ├── testScorer.js           # Part 3: Sample & edge-case scorer test suite
+│   │   ├── calibrateScorer.js      # Part 3: Grid-search calibration advisor (read-only)
+│   │   └── testScorePersistence.js # Part 3: DB response persistence & duplicate check
 │   ├── .env.example            # Sample environment variables
 │   ├── .env                    # Local environment config
 │   └── package.json            # Server dependencies & npm scripts
@@ -321,6 +333,105 @@ curl -X POST http://localhost:5000/api/skill-match \
 
 ---
 
+## Part 3: Answer Scorer Module
+
+### Objective
+Given an interview question and a candidate's free-text answer, deterministically compute an explainable **Relevancy** (`0..1`), **Correctness** (`0..1`), weighted **Answer Score** (`0..1`), and **Verdict** (`IRRELEVANT` | `PARTIAL` | `STRONG`), while enforcing anti-gaming rules and persisting the evaluation to PostgreSQL.
+
+### How Relevancy & Correctness Are Computed
+All scoring logic lives in `server/src/scorers/logicScorer.js`, driven exclusively by constants in `server/src/config/scorerConfig.js` and selected via `server/src/scorers/index.js` (`embeddingScorer.js` provides a swappable future placeholder):
+
+1. **Preprocessing & Synonym Expansion (`src/utils/skillNormalizer.js`)**:
+   - Expands defence/systems abbreviations in free text using `src/data/skillSynonyms.json` (e.g., `V&V` → `verification and validation`, `TMR` → `system architecture and fault tolerance`, `MIL-STD-1553B`, `DO-178C`, `MC/DC`).
+   - Normalizes punctuation, removes stopwords (`natural.stopwords`), and applies Porter stemming (`natural.PorterStemmer`).
+   - Builds an in-memory **IDF cache** (`refreshIdf()`) across all questions in PostgreSQL (`questionText + idealAnswer + keywords`).
+
+2. **Relevancy (`0..1`) — Is the answer on-topic for this question?**:
+   - Builds the question's **topic vocabulary** (unique stems from `questionText + keywords + idealAnswer`).
+   - Computes `topicOverlap` (weighted blend of answer-token precision inside topic vocabulary and topic-vocabulary recall).
+   - Computes TF-IDF cosine similarity against `questionText` (`questionSimilarity`) and against `idealAnswer` (`idealAnswerSimilarity`).
+   - Blends `topicOverlap` (`0.50`), `questionSimilarity` (`0.20`), and `idealAnswerSimilarity` (`0.30`).
+
+3. **Correctness (`0..1`) — How well does it cover expected content?**:
+   - Computes `keywordCoverage`: fraction of question `keywords` matched after stemming and synonym canonicalization, with IDF-weighted partial credit for multi-word keywords where only a subset of tokens match.
+   - Blends `keywordCoverage` (`0.65`) and `idealAnswerSimilarity` (`0.35`).
+
+4. **Anti-Gaming & Combination**:
+   - `NO_ANSWER`: Empty text or phrases like `"I don't know"`, `"no idea"`, `"pass"` → `0 / 0 / 0`, `IRRELEVANT`.
+   - `TOO_SHORT`: Below `MIN_WORD_COUNT` (`6` words) → scores capped.
+   - `KEYWORD_STUFFING`: High keyword density combined with very low prose stopword ratio, comma-list structure, or low lexical diversity → penalized by multiplier (`0.45`) and capped.
+   - `OFF_TOPIC`: `topicOverlap` below `0.15` → relevancy forced low (`<= 0.15`) and score capped.
+   - `LONG_ANSWER_CAPPED`: Very long answers are truncated at `MAX_ANSWER_WORDS` (`250`) and TF is sublinear/capped so padding cannot inflate scores.
+   - Final combination: `answerScore = 0.4 * relevancy + 0.6 * correctness`, mapped to `IRRELEVANT` (`< 0.35`), `PARTIAL` (`0.35–0.70`), or `STRONG` (`> 0.70`).
+   - `ICEBREAKER` questions with an empty `idealAnswer` are stored with `null` scores and verdict `NOT_SCORED`.
+
+### Running Part 3 Tests & Calibration
+
+1. **Apply the Part 3 Prisma migration** (adds nullable `answerScore`, `verdict`, and `breakdown` columns on `Response`):
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
+2. **Run the deterministic scorer test suite** (scores all 25 samples in `src/data/sampleAnswers.json` plus `NO_ANSWER`, `TOO_SHORT`, and long-padding edge cases):
+   ```bash
+   npm run test:scorer
+   ```
+3. **Run the read-only grid-search calibration advisor** (evaluates threshold and weight combinations across `sampleAnswers.json` and prints top suggestions without editing `scorerConfig.js`):
+   ```bash
+   npm run calibrate:scorer
+   ```
+4. **Run the PostgreSQL persistence test** (creates dummy candidate/session, calls `scoreAndSaveResponse`, checks DB rows, verifies duplicate question rejection, and cleans up):
+   ```bash
+   npm run test:persistence
+   ```
+
+### Score & Save Answer API (`POST /api/answers`)
+
+**cURL Request**:
+```bash
+curl -X POST http://localhost:5000/api/answers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "<SESSION_ID>",
+    "questionId": "asd-req-e1",
+    "answerText": "In avionics systems, functional requirements define system behavior such as trajectory calculations, whereas non-functional requirements specify quality attributes like latency, MTBF reliability, and MIL-STD compliance."
+  }'
+```
+
+**Response (201 Created)**:
+```json
+{
+  "responseId": "7d8c1f2b-1234-4a5b-9c8d-0123456789ab",
+  "sessionId": "<SESSION_ID>",
+  "questionId": "asd-req-e1",
+  "relevancy": 0.7295,
+  "correctness": 0.9208,
+  "answerScore": 0.8443,
+  "verdict": "STRONG",
+  "breakdown": {
+    "matchedKeywords": [
+      "functional requirements",
+      "non-functional requirements",
+      "avionics systems",
+      "system behavior",
+      "quality attributes"
+    ],
+    "partialKeywords": [],
+    "missingKeywords": [],
+    "keywordCoverage": 1,
+    "idealAnswerSimilarity": 0.7738,
+    "questionSimilarity": 0.3634,
+    "topicOverlap": 0.8494,
+    "wordCount": 25,
+    "stopwordRatio": 0.1852,
+    "keywordDensity": 0.4074,
+    "flags": []
+  }
+}
+```
+
+---
+
 ## Available npm Scripts
 
 | Command | Description |
@@ -331,3 +442,6 @@ curl -X POST http://localhost:5000/api/skill-match \
 | `npm run db:reset` | Drops, re-migrates, and seeds the database |
 | `npm run test:db` | Runs Part 1 relational test suite (`scripts/testDb.js`) |
 | `npm run test:skillmatch` | Runs Part 2 4-scenario skill match test suite (`scripts/testSkillMatch.js`) |
+| `npm run test:scorer` | Runs Part 3 answer scorer & edge-case test suite (`scripts/testScorer.js`) |
+| `npm run calibrate:scorer` | Runs Part 3 grid-search calibration advisor (`scripts/calibrateScorer.js`) |
+| `npm run test:persistence` | Runs Part 3 DB persistence & duplicate rejection suite (`scripts/testScorePersistence.js`) |

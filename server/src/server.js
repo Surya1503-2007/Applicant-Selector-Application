@@ -11,9 +11,10 @@ const app = require('./app');
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`🚀 RAC DRDO Skill-Match Server running on port ${PORT}`);
+  console.log(`🚀 RAC DRDO Adaptive Interview Server running on port ${PORT}`);
   console.log(`👉 POST http://localhost:${PORT}/api/skill-match`);
   console.log(`👉 POST http://localhost:${PORT}/api/candidates/:id/skills`);
+  console.log(`👉 POST http://localhost:${PORT}/api/answers`);
 });
 
 module.exports = server;
