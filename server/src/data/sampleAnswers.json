@@ -1,0 +1,177 @@
+[
+  {
+    "id": "req-e1-strong",
+    "questionId": "asd-req-e1",
+    "label": "strong",
+    "expectedVerdict": "STRONG",
+    "answerText": "In avionics systems, functional requirements specify exact system behavior, computations, and input-output transformations, such as calculating weapon release cues or missile trajectory guidance. Non-functional requirements define quality attributes and operational constraints like deterministic latency, MTBF reliability, thermal tolerance, and MIL-STD environmental compliance."
+  },
+  {
+    "id": "req-e1-partial",
+    "questionId": "asd-req-e1",
+    "label": "partial",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "Functional requirements define what an avionics computer needs to do during flight operations, for example computing navigation outputs from sensor inputs. There are also system constraints around timing and hardware reliability that engineers have to track during design."
+  },
+  {
+    "id": "req-e1-irrelevant",
+    "questionId": "asd-req-e1",
+    "label": "irrelevant",
+    "expectedVerdict": "IRRELEVANT",
+    "answerText": "In modern web development, PostgreSQL indexing and React state hooks improve dashboard rendering speed when fetching paginated JSON records from REST endpoints over HTTPS."
+  },
+  {
+    "id": "req-e1-stuffed",
+    "questionId": "asd-req-e1",
+    "label": "keyword-stuffed",
+    "expectedVerdict": "NOT_STRONG",
+    "answerText": "functional requirements, non-functional requirements, avionics systems, system behavior, quality attributes, trajectory, latency, MTBF"
+  },
+  {
+    "id": "req-e1-paraphrased",
+    "questionId": "asd-req-e1",
+    "label": "paraphrased-correct",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "One category specifies the concrete processing tasks and input-to-output computations an airborne platform must perform, such as target tracking or guidance law execution. The second category constrains how well the platform operates under mission stress, covering maximum response latency, thermal limits, and overall dependability."
+  },
+  {
+    "id": "req-m1-strong",
+    "questionId": "asd-req-m1",
+    "label": "strong",
+    "expectedVerdict": "STRONG",
+    "answerText": "A requirements traceability matrix establishes bidirectional traceability by linking high-level operational requirements forward to system specifications, architecture modules, source code units, and verification test cases, while mapping backward from tests to parent requirements. This prevents orphan code and supports DO-178C compliance and change impact analysis."
+  },
+  {
+    "id": "req-m1-partial",
+    "questionId": "asd-req-m1",
+    "label": "partial",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "A requirements traceability matrix links operational user requirements forward to software modules and verification test cases so engineers can confirm every requirement has a corresponding test before delivery."
+  },
+  {
+    "id": "req-m1-irrelevant",
+    "questionId": "asd-req-m1",
+    "label": "irrelevant",
+    "expectedVerdict": "IRRELEVANT",
+    "answerText": "Public key cryptography uses asymmetric key pairs and digital certificates to authenticate TLS handshakes and protect e-commerce browser sessions from eavesdropping."
+  },
+  {
+    "id": "req-m1-stuffed",
+    "questionId": "asd-req-m1",
+    "label": "keyword-stuffed",
+    "expectedVerdict": "NOT_STRONG",
+    "answerText": "requirements traceability matrix, bidirectional traceability, DO-178C, change impact analysis, verification test cases, RTM"
+  },
+  {
+    "id": "req-m1-paraphrased",
+    "questionId": "asd-req-m1",
+    "label": "paraphrased-correct",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "You connect mission objectives top-down to subsystem specifications, design blocks, code units, and test procedures, and trace bottom-up from every executed check back to an authorized user need. Doing so eliminates undocumented features, supports safety certification audits, and reveals what downstream artifacts are affected when specifications evolve."
+  },
+  {
+    "id": "arch-m2-strong",
+    "questionId": "asd-arch-m2",
+    "label": "strong",
+    "expectedVerdict": "STRONG",
+    "answerText": "A triple modular redundancy flight control computer runs synchronized computations across three isolated processing lanes and feeds all outputs into a 2-out-of-3 majority voter. When a single event upset causes a transient bit-flip in one lane, the majority voter masks the corrupted value, tolerates Byzantine fault behavior, and realigns the faulty channel."
+  },
+  {
+    "id": "arch-m2-partial",
+    "questionId": "asd-arch-m2",
+    "label": "partial",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "In a flight control computer using triple modular redundancy, three parallel processors run the same flight control code and send outputs to a majority voter so a single faulty lane cannot corrupt actuator commands."
+  },
+  {
+    "id": "arch-m2-irrelevant",
+    "questionId": "asd-arch-m2",
+    "label": "irrelevant",
+    "expectedVerdict": "IRRELEVANT",
+    "answerText": "Agile sprint retrospectives help scrum teams adjust story point velocity, groom Jira backlogs, and improve continuous deployment velocity for SaaS billing microservices."
+  },
+  {
+    "id": "arch-m2-stuffed",
+    "questionId": "asd-arch-m2",
+    "label": "keyword-stuffed",
+    "expectedVerdict": "NOT_STRONG",
+    "answerText": "triple modular redundancy, majority voter, single event upset, byzantine fault tolerance, flight control computer, TMR, SEU"
+  },
+  {
+    "id": "arch-m2-paraphrased",
+    "questionId": "asd-arch-m2",
+    "label": "paraphrased-correct",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "Three independent airborne computing channels process identical sensor inputs in lockstep, and an arbitration circuit selects the consensus command where at least two lanes agree. If cosmic radiation flips a memory bit in one lane, the consensus mechanism discards the outlier output and resynchronizes that channel without interrupting actuator control."
+  },
+  {
+    "id": "vv-e1-strong",
+    "questionId": "asd-vv-e1",
+    "label": "strong",
+    "expectedVerdict": "STRONG",
+    "answerText": "Within systems engineering and the V-model lifecycle, V&V covers two distinct questions. Verification ensures we are building the system right by checking artifacts against technical specifications through reviews and unit tests. Validation ensures we build the right system by proving it meets user mission needs during operational trials."
+  },
+  {
+    "id": "vv-e1-partial",
+    "questionId": "asd-vv-e1",
+    "label": "partial",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "In systems engineering and the V-model lifecycle, verification uses design reviews, unit tests, and integration checks to make sure engineering deliverables satisfy documented technical specifications."
+  },
+  {
+    "id": "vv-e1-irrelevant",
+    "questionId": "asd-vv-e1",
+    "label": "irrelevant",
+    "expectedVerdict": "IRRELEVANT",
+    "answerText": "Bilinear texture filtering and mipmapping reduce aliasing artifacts in OpenGL fragment shaders when rendering distant terrain meshes in 3D video games."
+  },
+  {
+    "id": "vv-e1-stuffed",
+    "questionId": "asd-vv-e1",
+    "label": "keyword-stuffed",
+    "expectedVerdict": "NOT_STRONG",
+    "answerText": "verification, validation, V-model lifecycle, systems engineering, operational trials, V&V"
+  },
+  {
+    "id": "vv-e1-paraphrased",
+    "questionId": "asd-vv-e1",
+    "label": "paraphrased-correct",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "Along the right leg of the development lifecycle, checking conformance confirms that each subsystem obeys its documented engineering blueprint via inspections and integration checks. Confirming mission fitness demonstrates in realistic field exercises that the finished product actually solves the end user's tactical problem."
+  },
+  {
+    "id": "iface-e2-strong",
+    "questionId": "asd-iface-e2",
+    "label": "strong",
+    "expectedVerdict": "STRONG",
+    "answerText": "MIL-STD-1553B is a dual-redundant 1 Mbps avionics serial bus using a deterministic command-response protocol where one bus controller manages up to 31 remote terminals for mission integration. In contrast, ARINC 429 is a simplex point-to-point or broadcast bus transmitting 32-bit words at 12.5 or 100 kbps from a single transmitter to navigation receivers."
+  },
+  {
+    "id": "iface-e2-partial",
+    "questionId": "asd-iface-e2",
+    "label": "partial",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "MIL-STD-1553B is a military avionics data bus with dual redundant channels controlled centrally at one megabit per second, commonly used on tactical aircraft to connect mission computers and weapon subsystems."
+  },
+  {
+    "id": "iface-e2-irrelevant",
+    "questionId": "asd-iface-e2",
+    "label": "irrelevant",
+    "expectedVerdict": "IRRELEVANT",
+    "answerText": "Hydroponic vertical farms optimize lettuce yield by balancing pH levels, LED photosynthetically active radiation spectra, and dissolved nutrient concentration in recirculating water."
+  },
+  {
+    "id": "iface-e2-stuffed",
+    "questionId": "asd-iface-e2",
+    "label": "keyword-stuffed",
+    "expectedVerdict": "NOT_STRONG",
+    "answerText": "MIL-STD-1553B, ARINC 429, bus controller, avionics serial bus, command-response protocol, 1553B"
+  },
+  {
+    "id": "iface-e2-paraphrased",
+    "questionId": "asd-iface-e2",
+    "label": "paraphrased-correct",
+    "expectedVerdict": "PARTIAL",
+    "answerText": "The military standard data link operates at one megabit over twin redundant twisted pairs with a central master polling up to thirty-one peripheral nodes for weapon and tactical integration. The commercial aviation link runs unidirectionally from one sender to multiple listeners at lower bitrates using thirty-two-bit frames for sensor feeds."
+  }
+]

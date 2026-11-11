@@ -9,7 +9,10 @@
     "db:seed": "node prisma/seed.js",
     "db:reset": "prisma migrate reset --force",
     "test:db": "node scripts/testDb.js",
-    "test:skillmatch": "node scripts/testSkillMatch.js"
+    "test:skillmatch": "node scripts/testSkillMatch.js",
+    "test:scorer": "node scripts/testScorer.js",
+    "calibrate:scorer": "node scripts/calibrateScorer.js",
+    "test:persistence": "node scripts/testScorePersistence.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

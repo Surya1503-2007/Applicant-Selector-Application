@@ -99,9 +99,153 @@ function getCanonicalForm(text) {
   return normalized;
 }
 
+const STOPWORD_SET = new Set(natural.stopwords);
+const PROSE_STOPWORD_SET = new Set(
+  natural.stopwords.filter((word) => word.length > 1 || word === 'a' || word === 'i')
+);
+
+/**
+ * Escapes special regex metacharacters in a string.
+ *
+ * @param {string} value - Raw string to escape.
+ * @returns {string} Regex-escaped string.
+ */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Precompile single-pass synonym expansion regex sorted longest-first
+const SORTED_SYNONYM_KEYS = Object.keys(synonyms).sort((a, b) => b.length - a.length);
+const SYNONYM_REGEX =
+  SORTED_SYNONYM_KEYS.length > 0
+    ? new RegExp(
+        `(?<![a-z0-9])(${SORTED_SYNONYM_KEYS.map(escapeRegExp).join('|')})(?![a-z0-9])`,
+        'gi'
+      )
+    : null;
+
+/**
+ * Expands known domain abbreviations and synonyms in free text using a single-pass regex.
+ * Preserves original tokens while adding canonical expansions when the canonical form introduces
+ * additional non-stopword stems (e.g., "V&V" -> "V&V verification and validation").
+ *
+ * @param {string} text - Raw free-text input.
+ * @returns {string} Text with domain abbreviations/synonyms expanded.
+ */
+function expandSynonymsInText(text) {
+  if (!text || typeof text !== 'string' || !SYNONYM_REGEX) {
+    return typeof text === 'string' ? text : '';
+  }
+
+  return text.replace(SYNONYM_REGEX, (match) => {
+    const canonical = synonyms[match.toLowerCase()];
+    if (!canonical) {
+      return match;
+    }
+
+    const matchStems = new Set(
+      normalizeSkill(match)
+        .split(' ')
+        .filter((t) => t.length > 0 && !STOPWORD_SET.has(t))
+        .map((t) => natural.PorterStemmer.stem(t))
+    );
+    const canonicalStems = normalizeSkill(canonical)
+      .split(' ')
+      .filter((t) => t.length > 0 && !STOPWORD_SET.has(t))
+      .map((t) => natural.PorterStemmer.stem(t));
+
+    const introducesNewTerms = canonicalStems.some((stem) => !matchStems.has(stem));
+    if (!introducesNewTerms) {
+      return match;
+    }
+
+    return `${match} ${canonical}`;
+  });
+}
+
+/**
+ * Preprocesses free text into normalized non-stopword tokens, Porter stems, and linguistic metrics.
+ * Applies Part 2 synonym expansion and normalization before stopword removal and stemming.
+ *
+ * @param {string} text - Raw text (question, ideal answer, or candidate answer).
+ * @param {{ maxWords?: number }} [options={}] - Optional preprocessing constraints.
+ * @returns {{
+ *   rawWordCount: number,
+ *   proseStopwordCount: number,
+ *   proseStopwordRatio: number,
+ *   commaCount: number,
+ *   truncated: boolean,
+ *   expandedText: string,
+ *   tokens: string[],
+ *   stems: string[]
+ * }} Structured preprocessing output and raw text diagnostics.
+ */
+function preprocessText(text, options = {}) {
+  if (!text || typeof text !== 'string') {
+    return {
+      rawWordCount: 0,
+      proseStopwordCount: 0,
+      proseStopwordRatio: 0,
+      commaCount: 0,
+      truncated: false,
+      expandedText: '',
+      tokens: [],
+      stems: [],
+    };
+  }
+
+  const rawNormalized = normalizeSkill(text);
+  const rawTokens = rawNormalized ? rawNormalized.split(' ').filter(Boolean) : [];
+  const rawWordCount = text
+    .trim()
+    .split(/\s+/)
+    .filter((token) => /[a-z0-9]/i.test(token)).length;
+
+  let proseStopwordCount = 0;
+  for (const token of rawTokens) {
+    if (PROSE_STOPWORD_SET.has(token)) {
+      proseStopwordCount += 1;
+    }
+  }
+  const proseStopwordRatio = rawTokens.length > 0 ? proseStopwordCount / rawTokens.length : 0;
+  const commaCount = (text.match(/[,;]/g) || []).length;
+
+  // Enforce optional raw word cap prior to synonym expansion to limit length padding
+  let workingText = text;
+  let truncated = false;
+  if (options.maxWords && options.maxWords > 0) {
+    const whitespaceWords = text.trim().split(/\s+/);
+    if (whitespaceWords.length > options.maxWords) {
+      workingText = whitespaceWords.slice(0, options.maxWords).join(' ');
+      truncated = true;
+    }
+  }
+
+  const expandedText = expandSynonymsInText(workingText);
+  const expandedNormalized = normalizeSkill(expandedText);
+  const tokens = expandedNormalized
+    ? expandedNormalized.split(' ').filter((t) => t.length > 0 && !STOPWORD_SET.has(t))
+    : [];
+  const stems = tokens.map((token) => natural.PorterStemmer.stem(token));
+
+  return {
+    rawWordCount,
+    proseStopwordCount,
+    proseStopwordRatio,
+    commaCount,
+    truncated,
+    expandedText,
+    tokens,
+    stems,
+  };
+}
+
 module.exports = {
   normalizeSkill,
   tokenizeAndStem,
   getCanonicalForm,
+  expandSynonymsInText,
+  preprocessText,
+  STOPWORD_SET,
 };
 

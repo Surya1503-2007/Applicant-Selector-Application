@@ -108,6 +108,9 @@ model Response {
   answerText       String    @db.Text
   relevancyScore   Float?
   correctnessScore Float?
+  answerScore      Float?
+  verdict          String?
+  breakdown        Json?
   timestamp        DateTime  @default(now())
 
   // Ensures a question cannot be asked more than once in the same session

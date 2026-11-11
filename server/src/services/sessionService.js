@@ -79,14 +79,23 @@ async function endSession(sessionId) {
  * @param {string} answerText - The raw transcript/text response provided by the candidate.
  * @param {number|null} [relevancy=null] - Evaluated relevancy score (0.0 to 1.0 or null if not yet scored).
  * @param {number|null} [correctness=null] - Evaluated correctness score (0.0 to 1.0 or null if not yet scored).
+ * @param {{ answerScore?: number|null, verdict?: string|null, breakdown?: object|null }} [scoringMeta={}] - Optional Part 3 scoring metadata.
  * @returns {Promise<object>} Created response record.
  */
-async function addResponse(sessionId, questionId, answerText, relevancy = null, correctness = null) {
+async function addResponse(
+  sessionId,
+  questionId,
+  answerText,
+  relevancy = null,
+  correctness = null,
+  scoringMeta = {}
+) {
   if (!sessionId || !questionId) {
     throw new Error('Both sessionId and questionId are required to record a response.');
   }
 
-  // TODO [Part 2]: Invoke NLP/AI evaluator to calculate relevancy and correctness scores
+  const { answerScore = null, verdict = null, breakdown = null } = scoringMeta || {};
+
   return prisma.response.create({
     data: {
       sessionId,
@@ -94,6 +103,9 @@ async function addResponse(sessionId, questionId, answerText, relevancy = null, 
       answerText,
       relevancyScore: relevancy !== undefined ? relevancy : null,
       correctnessScore: correctness !== undefined ? correctness : null,
+      answerScore: answerScore !== undefined ? answerScore : null,
+      verdict: verdict !== undefined ? verdict : null,
+      breakdown: breakdown !== undefined && breakdown !== null ? breakdown : undefined,
       timestamp: new Date(),
     },
     include: {
