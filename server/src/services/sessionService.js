@@ -88,7 +88,8 @@ async function addResponse(
   answerText,
   relevancy = null,
   correctness = null,
-  scoringMeta = {}
+  scoringMeta = {},
+  isReask = false
 ) {
   if (!sessionId || !questionId) {
     throw new Error('Both sessionId and questionId are required to record a response.');
@@ -106,6 +107,7 @@ async function addResponse(
       answerScore: answerScore !== undefined ? answerScore : null,
       verdict: verdict !== undefined ? verdict : null,
       breakdown: breakdown !== undefined && breakdown !== null ? breakdown : undefined,
+      isReask: Boolean(isReask),
       timestamp: new Date(),
     },
     include: {

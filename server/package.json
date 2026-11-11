@@ -12,7 +12,9 @@
     "test:skillmatch": "node scripts/testSkillMatch.js",
     "test:scorer": "node scripts/testScorer.js",
     "calibrate:scorer": "node scripts/calibrateScorer.js",
-    "test:persistence": "node scripts/testScorePersistence.js"
+    "test:persistence": "node scripts/testScorePersistence.js",
+    "test:decision": "node scripts/testDecisionLogic.js",
+    "test:simulate": "node scripts/simulateInterview.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

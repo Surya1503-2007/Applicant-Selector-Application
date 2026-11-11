@@ -335,6 +335,81 @@ curl -X POST http://localhost:5000/api/skill-match \
 
 ## Part 3: Answer Scorer Module
 
+---
+
+## Part 4: Adaptive Interview Engine
+
+### Objective
+Run an interview session as a deterministic state‑machine. The engine selects questions based on the candidate’s answer verdicts (IRRELEVANT | PARTIAL | STRONG) and enforces the adaptive ladder:
+
+- **Phase 1 – Icebreakers** – configurable number of ICEBREAKER questions (default 2). They are stored with `NOT_SCORED` and do not affect difficulty.
+- **Phase 2 – Technical ladder** – for each topic the flow is:
+  - **EASY** → verdict determines whether we stay on EASY, move to MEDIUM, or re‑ask a simplified version.
+  - **MEDIUM** → similar logic, moving to HARD on a STRONG verdict.
+  - **HARD** → topic finishes on IRRELEVANT/PARTIAL or on STRONG (mastered).
+- **Stop conditions** – configurable caps such as `maxQuestions` (default 10), `maxConsecutiveIrrelevant` (default 3), topic‑question caps, and overall pool exhaustion. The engine logs the decision reason and stores it in `DecisionLog`.
+
+All thresholds/caps live in `src/config/engineConfig.js` – no magic numbers elsewhere.
+
+### Core Files
+- `src/config/engineConfig.js` – configuration constants.
+- `src/engine/adaptiveEngine.js` – pure `decideNext` function implementing the rules, fallback handling, and hard guarantees.
+- `src/services/interviewService.js` – orchestrates session lifecycle, calls `adaptiveEngine`, records responses (`isReask` flag), and persists `SessionState` & `DecisionLog`.
+- `src/routes/interviewRoutes.js` – Express endpoints:
+  - `POST /api/interviews/start` – creates a session and returns the first question.
+  - `GET /api/interviews/:sessionId/question` – fetches the current question.
+  - `POST /api/interviews/:sessionId/answer` – records answer, runs decision logic, and returns the next question or completion flag.
+  - `GET /api/interviews/:sessionId/state` – full interview state + decision log.
+  - `POST /api/interviews/:sessionId/end` – early termination.
+
+### Running Tests & Simulation
+```bash
+# unit‑test suite for decision logic (covers >20 branches)
+npm run test:decision
+
+# end‑to‑end interview simulation with four candidate archetypes
+npm run test:simulate
+```
+
+Both scripts assert the hard guarantees (no duplicate questions, difficulty only increments by one level, re‑ask counted separately, early‑stop conditions).
+
+### Sample API Flow (cURL)
+```bash
+# 1️⃣ Start interview (candidate & post must exist)
+curl -X POST http://localhost:5000/api/interviews/start \
+  -H "Content-Type: application/json" \
+  -d '{"candidateId":"<candidate-id>","postId":"<post-id>"}'
+
+# 2️⃣ Get current question
+curl http://localhost:5000/api/interviews/<session-id>/question
+
+# 3️⃣ Submit answer
+curl -X POST http://localhost:5000/api/interviews/<session-id>/answer \
+  -H "Content-Type: application/json" \
+  -d '{"answerText":"my answer"}'
+
+# 4️⃣ Fetch interview state (includes decision log & end reason)
+curl http://localhost:5000/api/interviews/<session-id>/state
+
+# 5️⃣ End interview early (optional)
+curl -X POST http://localhost:5000/api/interviews/<session-id>/end \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"CANDIDATE_STRUGGLING"}'
+```
+
+### Tweaking the Engine
+All adaptive parameters are in `src/config/engineConfig.js`:
+- `ICEBREAKER_COUNT`
+- `MAX_QUESTIONS`
+- `MAX_CONSECUTIVE_IRRELEVANT`
+- `MAX_EASY_PER_TOPIC`, `MAX_MEDIUM_PER_TOPIC`
+- `DIFFICULTY_ORDER` (EASY → MEDIUM → HARD)
+- fallback strategies, etc.
+
+Update these values and restart the server to apply new behavior.
+
+---
+
 ### Objective
 Given an interview question and a candidate's free-text answer, deterministically compute an explainable **Relevancy** (`0..1`), **Correctness** (`0..1`), weighted **Answer Score** (`0..1`), and **Verdict** (`IRRELEVANT` | `PARTIAL` | `STRONG`), while enforcing anti-gaming rules and persisting the evaluation to PostgreSQL.
 

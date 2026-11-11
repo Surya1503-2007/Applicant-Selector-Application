@@ -29,7 +29,8 @@ async function saveResponseWithConflictHandling(
   answerText,
   relevancy,
   correctness,
-  scoringMeta
+  scoringMeta,
+  isReask = false
 ) {
   try {
     return await sessionService.addResponse(
@@ -38,12 +39,13 @@ async function saveResponseWithConflictHandling(
       answerText,
       relevancy,
       correctness,
-      scoringMeta
+      scoringMeta,
+      isReask
     );
   } catch (err) {
     if (err.code === 'P2002' || (err.message && err.message.includes('Unique constraint failed'))) {
       const conflictError = new Error(
-        `Question "${questionId}" has already been answered in session "${sessionId}".`
+        `Question "${questionId}" has already been answered in session "${sessionId}" (isReask=${isReask}).`
       );
       conflictError.code = 'P2002';
       conflictError.statusCode = 409;
@@ -65,6 +67,7 @@ async function saveResponseWithConflictHandling(
  * @param {string} questionId - Unique identifier of the interview question.
  * @param {string} answerText - Candidate's free-text answer (may be empty).
  * @param {object} [scorer=activeScorer] - Optional swappable scorer override.
+ * @param {boolean} [isReask=false] - Whether this response is for a simplified re-ask.
  * @returns {Promise<{
  *   responseId: string,
  *   sessionId: string,
@@ -76,7 +79,13 @@ async function saveResponseWithConflictHandling(
  *   breakdown: object
  * }>} Saved response ID and full scoring result.
  */
-async function scoreAndSaveResponse(sessionId, questionId, answerText, scorer = activeScorer) {
+async function scoreAndSaveResponse(
+  sessionId,
+  questionId,
+  answerText,
+  scorer = activeScorer,
+  isReask = false
+) {
   if (!sessionId || typeof sessionId !== 'string') {
     const err = new Error('sessionId is required and must be a non-empty string.');
     err.statusCode = 400;
@@ -142,7 +151,8 @@ async function scoreAndSaveResponse(sessionId, questionId, answerText, scorer = 
         answerScore: null,
         verdict: VERDICTS.NOT_SCORED,
         breakdown: notScoredBreakdown,
-      }
+      },
+      isReask
     );
 
     return {
@@ -176,7 +186,8 @@ async function scoreAndSaveResponse(sessionId, questionId, answerText, scorer = 
       answerScore: scoringResult.answerScore,
       verdict: scoringResult.verdict,
       breakdown: scoringResult.breakdown,
-    }
+    },
+    isReask
   );
 
   return {
