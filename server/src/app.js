@@ -9,6 +9,8 @@ const answerRoutes = require('./routes/answerRoutes');
 const postRoutes = require('./routes/postRoutes');
 const candidateRoutes = require('./routes/candidateRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
+const interviewRoutes = require('./routes/interviewRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 
@@ -45,6 +47,8 @@ app.use('/api', answerRoutes);
 app.use('/api', postRoutes);
 app.use('/api', candidateRoutes);
 app.use('/api', sessionRoutes);
+app.use('/api', interviewRoutes);
+app.use('/api', reportRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

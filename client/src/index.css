@@ -34,3 +34,38 @@
   background: #94a3b8;
 }
 
+/* Print-specific styles for Report & Evaluation Dossier */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  header,
+  footer,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  .print\\:border-none {
+    border: none !important;
+  }
+
+  /* Prevent awkward page break splits inside cards and tables */
+  .card,
+  table,
+  tr,
+  svg {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Optimize contrast and remove shadows for paper output */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+

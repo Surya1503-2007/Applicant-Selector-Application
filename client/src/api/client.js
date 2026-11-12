@@ -299,6 +299,126 @@ export async function submitAnswer({ sessionId, questionId, answerText }) {
   });
 }
 
+// =========================================================================
+// Adaptive Interview Room API (Part 4 & 6)
+// =========================================================================
+
+/**
+ * Retrieves the current pending question for an active interview session.
+ * Refresh-safe: returns identical question until an answer is submitted.
+ *
+ * @async
+ * @param {string} sessionId - Interview session ID.
+ * @returns {Promise<object>} Question payload or completion signal.
+ */
+export async function fetchInterviewQuestion(sessionId) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required to fetch interview question.', 400);
+  }
+  return request(`/interviews/${encodeURIComponent(sessionId)}/question`);
+}
+
+/**
+ * Concludes an interview session early with examiner rationale.
+ *
+ * @async
+ * @param {string} sessionId - Interview session ID.
+ * @param {string} reason - Examiner termination reason.
+ * @returns {Promise<object>} Termination confirmation.
+ */
+export async function terminateInterviewEarly(sessionId, reason) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required.', 400);
+  }
+  return request(`/interviews/${encodeURIComponent(sessionId)}/terminate`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+// =========================================================================
+// Reports & Rankings API (Part 5 & 6)
+// =========================================================================
+
+/**
+ * Retrieves the candidate evaluation dossier for a completed or active session.
+ *
+ * @async
+ * @param {string} sessionId - Session ID.
+ * @returns {Promise<object>} Comprehensive candidate report dossier.
+ */
+export async function fetchReport(sessionId) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required to fetch report.', 400);
+  }
+  return request(`/reports/${encodeURIComponent(sessionId)}`);
+}
+
+/**
+ * Saves board remarks for a candidate dossier.
+ *
+ * @async
+ * @param {string} sessionId - Session ID.
+ * @param {string} remarks - Examiner committee remarks.
+ * @returns {Promise<object>}
+ */
+export async function saveBoardRemarks(sessionId, remarks) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required.', 400);
+  }
+  return request(`/reports/${encodeURIComponent(sessionId)}/remarks`, {
+    method: 'POST',
+    body: JSON.stringify({ remarks }),
+  });
+}
+
+/**
+ * Records an examiner recommendation override.
+ *
+ * @async
+ * @param {string} sessionId - Session ID.
+ * @param {object} params
+ * @param {string} params.finalRecommendation - SUITABLE | BORDERLINE | NOT_SUITABLE
+ * @param {string} params.reason - Mandatory justification
+ * @param {string} [params.overriddenBy] - Examiner name / title
+ * @returns {Promise<object>}
+ */
+export async function overrideRecommendation(sessionId, { finalRecommendation, reason, overriddenBy }) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required.', 400);
+  }
+  return request(`/reports/${encodeURIComponent(sessionId)}/override`, {
+    method: 'POST',
+    body: JSON.stringify({ finalRecommendation, reason, overriddenBy }),
+  });
+}
+
+/**
+ * Regenerates the report, incrementing the version while preserving data.
+ *
+ * @async
+ * @param {string} sessionId - Session ID.
+ * @returns {Promise<object>} Updated report dossier.
+ */
+export async function regenerateReport(sessionId) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required.', 400);
+  }
+  return request(`/reports/${encodeURIComponent(sessionId)}/regenerate`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Retrieves all evaluated candidate dossiers for the Recruitment Rankings view.
+ *
+ * @async
+ * @returns {Promise<Array<object>>} List of candidate reports with overall scores and recommendations.
+ */
+export async function fetchRankings() {
+  return request('/reports');
+}
+
 /**
  * Server health check probe.
  *

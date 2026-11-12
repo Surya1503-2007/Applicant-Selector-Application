@@ -12,6 +12,7 @@ export default function Header() {
   const navLinks = [
     { label: 'Dashboard', path: '/' },
     { label: 'New Interview Setup', path: '/setup' },
+    { label: 'Rankings & Reports', path: '/reports' },
   ];
 
   return (

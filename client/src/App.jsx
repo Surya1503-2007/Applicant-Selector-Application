@@ -9,8 +9,10 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
 import SetupWizardPage from './pages/SetupWizardPage';
-import InterviewRoomPlaceholder from './pages/InterviewRoomPlaceholder';
-import ReportPlaceholder from './pages/ReportPlaceholder';
+import InterviewRoomPage from './pages/InterviewRoomPage';
+import CompletionPage from './pages/CompletionPage';
+import ReportPage from './pages/ReportPage';
+import RankingsPage from './pages/RankingsPage';
 
 function NotFoundPage() {
   return (
@@ -48,8 +50,10 @@ export default function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/setup" element={<SetupWizardPage />} />
-            <Route path="/interview/:sessionId" element={<InterviewRoomPlaceholder />} />
-            <Route path="/report/:sessionId" element={<ReportPlaceholder />} />
+            <Route path="/interview/:sessionId" element={<InterviewRoomPage />} />
+            <Route path="/interview/:sessionId/done" element={<CompletionPage />} />
+            <Route path="/report/:sessionId" element={<ReportPage />} />
+            <Route path="/reports" element={<RankingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
