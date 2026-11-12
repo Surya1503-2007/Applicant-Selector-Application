@@ -14,7 +14,10 @@
     "calibrate:scorer": "node scripts/calibrateScorer.js",
     "test:persistence": "node scripts/testScorePersistence.js",
     "test:decision": "node scripts/testDecisionLogic.js",
-    "test:simulate": "node scripts/simulateInterview.js"
+    "test:simulate": "node scripts/simulateInterview.js",
+    "test:reportcalc": "node scripts/testReportCalculator.js",
+    "test:qrelevancy": "node scripts/testQuestionRelevancy.js",
+    "test:reports": "node scripts/testReports.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

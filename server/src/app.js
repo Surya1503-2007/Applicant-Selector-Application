@@ -7,6 +7,7 @@ const express = require('express');
 const skillMatchRoutes = require('./routes/skillMatchRoutes');
 const answerRoutes = require('./routes/answerRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use('/api', skillMatchRoutes);
 app.use('/api', answerRoutes);
 app.use('/api/interviews', interviewRoutes);
+app.use('/api', reportRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
