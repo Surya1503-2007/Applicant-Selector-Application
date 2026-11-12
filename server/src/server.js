@@ -15,6 +15,11 @@ const server = app.listen(PORT, () => {
   console.log(`👉 POST http://localhost:${PORT}/api/skill-match`);
   console.log(`👉 POST http://localhost:${PORT}/api/candidates/:id/skills`);
   console.log(`👉 POST http://localhost:${PORT}/api/answers`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/posts`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/candidates`);
+  console.log(`👉 POST http://localhost:${PORT}/api/candidates`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/sessions`);
+  console.log(`👉 POST http://localhost:${PORT}/api/sessions`);
 });
 
 module.exports = server;

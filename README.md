@@ -5,6 +5,9 @@ AI-based adaptive interview and candidate screening platform designed for the **
 - **Part 1**: Database Foundation & Normalized Question Bank (Prisma + PostgreSQL)
 - **Part 2**: Skill-Match Suitability Engine & Candidate Screening API (Deterministic, Offline)
 - **Part 3**: Answer Scorer Engine, Calibration Suite & Response Scoring API (Deterministic, Offline)
+- **Part 4**: Adaptive Interview Engine (Backend Core)
+- **Part 5**: Candidate Assessment Report & Final Scoring (Backend Core)
+- **Part 6**: Frontend Development (Examiner Dashboard, Setup Wizard & Boardroom UI)
 
 ---
 
@@ -437,6 +440,9 @@ curl -X POST http://localhost:5000/api/answers \
 | Command | Description |
 | :--- | :--- |
 | `npm start` | Launches the Express API server on port 5000 |
+| `npm run client:dev` | Launches the Vite React frontend development server on port 5173 |
+| `npm run client:build` | Compiles production frontend bundle using Vite + Tailwind |
+| `npm run client:preview` | Previews the compiled production build locally |
 | `npm run db:migrate` | Runs `prisma migrate dev` to apply pending migrations |
 | `npm run db:seed` | Idempotently seeds question bank and post skills |
 | `npm run db:reset` | Drops, re-migrates, and seeds the database |
@@ -445,3 +451,68 @@ curl -X POST http://localhost:5000/api/answers \
 | `npm run test:scorer` | Runs Part 3 answer scorer & edge-case test suite (`scripts/testScorer.js`) |
 | `npm run calibrate:scorer` | Runs Part 3 grid-search calibration advisor (`scripts/calibrateScorer.js`) |
 | `npm run test:persistence` | Runs Part 3 DB persistence & duplicate rejection suite (`scripts/testScorePersistence.js`) |
+
+---
+
+## Part 6: Frontend Architecture & Backend Additions
+
+### 1. Minimal Backend Additions (Strictly Preserving Existing Logic)
+
+To support the React boardroom client without altering existing scoring, adaptive, or report engines, minimal REST endpoints were added:
+
+- **CORS Support**: Added middleware in `server/src/app.js` allowing Vite development origin (`http://localhost:5173`, `http://127.0.0.1:5173`) with explicit headers and `OPTIONS` preflight status `204`.
+- **Posts API (`server/src/routes/postRoutes.js`)**:
+  - `GET /api/posts`: Returns all recruitment posts with associated `postSkills`, skill details, and `subject`.
+  - `GET /api/posts/:id`: Returns single post details with associated required skills.
+- **Candidates API (`server/src/routes/candidateRoutes.js`)**:
+  - `GET /api/candidates`: Lists candidate profiles.
+  - `POST /api/candidates`: Registers candidate with `{ name, postApplied, experienceLevel }` by delegating directly to `sessionService.createCandidate`.
+  - `GET /api/candidates/:id`: Returns candidate profile with associated competencies and interview history.
+- **Sessions API (`server/src/routes/sessionRoutes.js`)**:
+  - `GET /api/sessions`: Returns recent interview sessions with candidate details, status, timestamps, and response counts for the dashboard.
+  - `POST /api/sessions`: Creates an active interview session with candidate ID.
+  - `GET /api/sessions/:id`: Returns session record including candidate and responses for `useInterviewSession`.
+
+### 2. Frontend Structure (`client/`)
+
+The client follows a clean, modular structure built on **React 18 + Vite + Tailwind CSS + React Router**:
+
+```
+client/
+├── index.html                  # HTML entry point with RAC DRDO meta tags
+├── vite.config.js              # Vite tooling configuration (port 5173)
+├── tailwind.config.js          # Government/defence color tokens & typography
+├── postcss.config.js           # PostCSS configuration
+├── package.json                # React, React Router, Vite, Tailwind dependencies
+├── src/
+│   ├── main.jsx                # React root mount
+│   ├── App.jsx                 # Application layout, routes & footer
+│   ├── index.css               # Tailwind directives & accessible focus styles
+│   ├── api/
+│   │   └── client.js           # Centralized fetch wrapper & typed named API calls
+│   ├── hooks/
+│   │   ├── useAsync.js         # Generic async lifecycle hook with unmount protection
+│   │   └── useInterviewSession.js # Dedicated session fetching & polling hook
+│   ├── components/
+│   │   ├── Header.jsx          # Boardroom header with Ashoka/DRDO emblem & tricolor stripe
+│   │   ├── Gauge.jsx           # Pure SVG semicircular match gauge (no chart libraries)
+│   │   ├── BandBadge.jsx       # Accessible suitability badge (STRONG | MODERATE | WEAK)
+│   │   ├── ChipInput.jsx       # Tag/chip competency input with keyboard shortcuts
+│   │   ├── ConfirmDialog.jsx   # Accessible modal dialog for examiner overrides
+│   │   ├── DataTable.jsx       # Responsive table with headers and custom renderers
+│   │   ├── Toast.jsx           # Status notifications with auto-dismiss
+│   │   ├── Spinner.jsx         # Accessible SVG loading indicator
+│   │   ├── ErrorState.jsx      # Error banner with retry trigger
+│   │   └── EmptyState.jsx      # Empty record placeholder with CTA
+│   └── pages/
+│       ├── DashboardPage.jsx   # Route / : Metrics, action cards, recent interviews table
+│       ├── SetupWizardPage.jsx # Route /setup : 3-phase onboarding wizard
+│       ├── InterviewRoomPlaceholder.jsx # Route /interview/:sessionId : Live room entry
+│       └── ReportPlaceholder.jsx        # Route /report/:sessionId : Dossier entry
+```
+
+### 3. Boardroom Theme & Visual Design
+- **Color Palette**: Defence navy (`#0F1E36`), navy light (`#1B2E4B`), gold accent (`#C5A059`), slate neutrals (`#F8FAFC` to `#0F172A`).
+- **Suitability Bands**: Emerald (`STRONG`), Amber (`MODERATE`), Rose (`WEAK`).
+- **Accessibility**: High contrast ratios, `role="dialog"` modal focus traps, `aria-current="step"`, keyboard navigation support on chips and tables.
+- **Examiner Discretion**: Semicircular SVG gauge and breakdown table are driven directly by backend API values; the "Start Interview" button is **never disabled**, allowing examiners to override WEAK ratings or mandatory gaps via an explicit confirmation dialog.
