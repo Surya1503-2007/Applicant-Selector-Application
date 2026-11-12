@@ -518,11 +518,22 @@ async function submitAnswer(sessionId, answerText) {
         where: { id: sessionId },
         data: { endTime: new Date() },
       });
-
-      // TODO [Part 5]: Hook for generating final assessment report
-      // await generateReport(sessionId);
     }
   });
+
+  // Part 5 Hook: Automatically generate assessment report upon completion
+  // Failure to generate report must NOT fail or rollback interview completion
+  if (isInterviewEnding) {
+    try {
+      const reportService = require('./reportService');
+      await reportService.generateReport(sessionId);
+    } catch (reportErr) {
+      console.error(
+        `[Part 5] Automatic report generation failed for completed session "${sessionId}":`,
+        reportErr.message
+      );
+    }
+  }
 
   return {
     scoring: {
@@ -658,6 +669,17 @@ async function endInterviewEarly(sessionId, reason = END_REASONS.BOARD_TERMINATE
       },
     });
   });
+
+  // Part 5 Hook: Automatically generate assessment report upon early termination
+  try {
+    const reportService = require('./reportService');
+    await reportService.generateReport(sessionId);
+  } catch (reportErr) {
+    console.error(
+      `[Part 5] Automatic report generation failed for terminated session "${sessionId}":`,
+      reportErr.message
+    );
+  }
 
   return prisma.sessionState.findUnique({
     where: { sessionId },

@@ -72,8 +72,8 @@ function getScriptedAnswer(question, profile, stepIndex) {
   }
 
   if (profile === 'COLLAPSE') {
-    // Strong for first 3 questions, then completely irrelevant
-    if (stepIndex <= 2) {
+    // Strong on early questions to reach MEDIUM, then collapses to IRRELEVANT
+    if (stepIndex <= 3) {
       return (
         qSamples['strong'] ||
         question.idealAnswer ||

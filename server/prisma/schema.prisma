@@ -83,6 +83,7 @@ model Candidate {
   sessions          Session[]
   skills            CandidateSkill[]
   skillMatchResults SkillMatchResult[]
+  reports           Report[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }
@@ -97,6 +98,7 @@ model Session {
   responses    Response[]
   sessionState SessionState?
   decisionLogs DecisionLog[]
+  reports      Report[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -138,6 +140,7 @@ model Post {
   level             String
   postSkills        PostSkill[]
   skillMatchResults SkillMatchResult[]
+  reports           Report[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -226,4 +229,50 @@ model DecisionLog {
 
   @@index([sessionId])
   @@index([sessionId, step])
+}
+
+// =========================================================================
+// PART 5: Session Report and Final Scoring Models
+// =========================================================================
+
+/// Comprehensive, immutable assessment report snapshot generated upon interview completion
+model Report {
+  id                     String    @id @default(uuid())
+  sessionId              String
+  session                Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  candidateId            String
+  candidate              Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  postId                 String
+  post                   Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  version                Int       @default(1)
+  generatedAt            DateTime  @default(now())
+  configSnapshot         Json      // The config values used, so later changes never alter old reports
+  skillMatchPercent      Float
+  skillMatchBand         String
+  mandatoryGap           Boolean
+  missingMandatory       Json
+  interviewScore         Float
+  overallScore           Float
+  systemRecommendation   String    // Computed, never edited
+  finalRecommendation    String    // Equals system value unless the board overrides
+  terminatedEarly        Boolean   @default(false)
+  endReason              String?
+  questionRelevancyScore Float
+  questionRelevancyBand  String
+  topicScores            Json
+  questionTable          Json
+  difficultyProgression  Json
+  flags                  Json
+  decisionLog            Json      // Snapshot of the Part 4 audit trail
+  boardRemarks           String?   @db.Text
+  overriddenBy           String?
+  overriddenAt           DateTime?
+  overrideReason         String?   @db.Text
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@unique([sessionId, version])
+  @@index([sessionId])
+  @@index([candidateId])
+  @@index([postId])
 }

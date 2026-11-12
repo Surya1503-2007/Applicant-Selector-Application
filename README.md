@@ -507,6 +507,192 @@ curl -X POST http://localhost:5000/api/answers \
 
 ---
 
+## Part 5: Session Report and Final Scoring
+
+### Objective
+When an adaptive interview concludes (normally, early due to struggling, or via board termination), Part 5 deterministically generates an explainable, audit-ready assessment report snapshot. The report combines the candidate's Part 2 skill-match suitability, the difficulty-weighted Part 3 interview score, topic-wise strengths and weaknesses, an informational question-relevancy score, anti-gaming flags, and the Part 4 decision audit trail into an immutable database record.
+
+### Formulas & Scoring Rules Reference
+
+| Metric | Formula / Logic | Default Weights & Thresholds | Behavior & Guarantees |
+| :--- | :--- | :--- | :--- |
+| **Weighted Interview Score** | $100 \times \frac{\sum (w_{\text{diff}} \times \text{answerScore})}{\sum w_{\text{diff}}}$ | EASY: `1.0`<br>MEDIUM: `1.5`<br>HARD: `2.0` | **Technical questions only**. ICEBREAKER questions are excluded and shown unscored. Re-asked questions count **only the final attempt** (`isReask=true`). No zero-division on empty sessions. |
+| **Topic-Wise Scores** | $100 \times \frac{\sum (w_{\text{diff}} \times \text{answerScore})}{\sum w_{\text{diff}}}$ (per topic) | STRENGTH: $\ge 70$<br>AVERAGE: $45 - 69.99$<br>WEAKNESS: $< 45$<br>NOT_ASSESSED: $0$ questions | Records topic score, questions count, highest difficulty reached, highest difficulty answered `STRONG`, and classification label. Topics without questions are labeled `NOT_ASSESSED` (score: `null`). |
+| **Overall Suitability Score** | $w_{\text{Skill}} \times \text{skillMatchPercent} + w_{\text{Interview}} \times \text{interviewScore}$ | $w_{\text{Skill}} = 0.20$<br>$w_{\text{Interview}} = 0.80$ | Blended composite suitability score ($0$ to $100$). Mandatory-skill gap from Part 2 is carried as an audit warning and strictly does **not** change this score. |
+| **System Recommendation** | $\ge 70$: `SUITABLE`<br>$45 - 69.99$: `BORDERLINE`<br>$< 45$: `NOT_SUITABLE` | Early termination cap: `BORDERLINE` | Early-ended interviews (`CANDIDATE_STRUGGLING` or `BOARD_TERMINATED`) score only answered questions, set `terminatedEarly=true`, and **cap the recommendation at BORDERLINE** (never `SUITABLE`). |
+| **Question-Relevancy Score** | $w_{\text{Cand}} \times \text{candidateFit} + w_{\text{Post}} \times \text{postFit}$<br>Session: $100 \times \text{avg}(\text{questionRelevancy})$ | $w_{\text{Cand}} = 0.50$<br>$w_{\text{Post}} = 0.50$<br>Floor: $0.40$<br>HIGH: $\ge 70$, MED: $40-69.99$, LOW: $<40$ | `candidateFit`: average best similarity of keywords + topic against candidate skills.<br>`postFit`: average best similarity against post skills (weight-adjusted by skill weight). Flagged as `LOW_FIT_QUESTION` if $< 0.40$. **Informational only; does not alter overallScore**. |
+
+### Immutability & Versioning Architecture
+Reports are persisted as immutable historical snapshots in the `Report` table with a composite key `@@unique([sessionId, version])`.
+- Once generated, modifying runtime configuration constants will **never alter existing report snapshots**.
+- Re-running report generation is idempotent by default (`regenerate=false` returns the existing report).
+- Explicit re-scoring (`regenerate=true`) increments the `version` counter and archives the new snapshot while keeping all previous versions accessible.
+- Assessment board recommendation overrides preserve `systemRecommendation` untouched, assign `finalRecommendation`, and enforce an audit record (`overriddenBy`, `overriddenAt`, and mandatory `overrideReason`).
+
+### Sample Report JSON (`GET /api/interviews/:sessionId/report`)
+```json
+{
+  "id": "e4f81c9a-1234-4567-89ab-cdef01234567",
+  "sessionId": "27193492-acf6-4cce-9d7f-89682c95163c",
+  "candidateId": "cand-001",
+  "postId": "post-asd-sc-c",
+  "version": 1,
+  "generatedAt": "2026-11-12T08:35:00.000Z",
+  "skillMatchPercent": 95.0,
+  "skillMatchBand": "STRONG",
+  "mandatoryGap": false,
+  "missingMandatory": [],
+  "interviewScore": 84.12,
+  "overallScore": 86.3,
+  "systemRecommendation": "SUITABLE",
+  "finalRecommendation": "SUITABLE",
+  "terminatedEarly": false,
+  "endReason": "MAX_QUESTIONS_REACHED",
+  "questionRelevancyScore": 82.38,
+  "questionRelevancyBand": "HIGH",
+  "topicScores": [
+    {
+      "topicId": "asd-top-req",
+      "topicName": "Requirements Analysis",
+      "score": 85.63,
+      "questionsCount": 3,
+      "highestDifficultyReached": "HARD",
+      "highestDifficultyStrong": "HARD",
+      "label": "STRENGTH"
+    },
+    {
+      "topicId": "asd-top-arch",
+      "topicName": "System Architecture",
+      "score": 82.85,
+      "questionsCount": 3,
+      "highestDifficultyReached": "HARD",
+      "highestDifficultyStrong": "HARD",
+      "label": "STRENGTH"
+    },
+    {
+      "topicId": "asd-top-vv",
+      "topicName": "Verification & Validation",
+      "score": 84.29,
+      "questionsCount": 3,
+      "highestDifficultyReached": "HARD",
+      "highestDifficultyStrong": "HARD",
+      "label": "STRENGTH"
+    },
+    {
+      "topicId": "asd-top-iface",
+      "topicName": "Interface Management",
+      "score": 82.36,
+      "questionsCount": 1,
+      "highestDifficultyReached": "EASY",
+      "highestDifficultyStrong": "EASY",
+      "label": "STRENGTH"
+    }
+  ],
+  "difficultyProgression": [
+    { "step": 1, "difficulty": "EASY", "verdict": "STRONG", "isReask": false, "answerScore": 0.886 },
+    { "step": 2, "difficulty": "MEDIUM", "verdict": "STRONG", "isReask": false, "answerScore": 0.8162 },
+    { "step": 3, "difficulty": "HARD", "verdict": "STRONG", "isReask": false, "answerScore": 0.8715 }
+  ],
+  "flags": {
+    "counts": {
+      "TOO_SHORT": 0,
+      "KEYWORD_STUFFING": 0,
+      "NO_ANSWER": 0,
+      "REASKED": 0,
+      "LOW_FIT_QUESTION": 0
+    },
+    "mandatoryGap": false,
+    "terminatedEarly": false,
+    "activeFlags": [],
+    "summaryText": "Clean session: no anomalies or anti-gaming flags triggered."
+  },
+  "boardRemarks": null,
+  "overriddenBy": null,
+  "overriddenAt": null,
+  "overrideReason": null
+}
+```
+
+### Running Part 5 Tests
+
+```bash
+# 1️⃣ Pure calculator unit tests (29 assertions: weighting, zero-division, boundaries, early-cap)
+npm run test:reportcalc
+
+# 2️⃣ Question-relevancy module tests (matching vs unrelated candidate, decoupling assertion)
+npm run test:qrelevancy
+
+# 3️⃣ End-to-end integration tests (strong, weak, mixed, collapse simulations, override, immutability)
+npm run test:reports
+```
+
+### Express API Endpoints & cURL Examples
+
+```bash
+# 1. Generate Report for a completed session (idempotent, reject if ACTIVE)
+curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report \
+  -H "Content-Type: application/json" \
+  -d '{"regenerate": false}'
+
+# 2. Retrieve Full Assessment Report (latest or specific version)
+curl http://localhost:5000/api/interviews/<SESSION_ID>/report
+curl "http://localhost:5000/api/interviews/<SESSION_ID>/report?version=1"
+
+# 3. Assessment Board Recommendation Override (reason is mandatory)
+curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report/override \
+  -H "Content-Type: application/json" \
+  -d '{
+    "newRecommendation": "BORDERLINE",
+    "reason": "Candidate exhibited strong theoretical knowledge but demonstrated hesitation on redundant bus architecture during oral interview.",
+    "remarks": "Recommended for probationary appointment under scientist supervision.",
+    "overriddenBy": "Dr. Assessment Board Chair"
+  }'
+
+# 4. Add or Update Board Remarks
+curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report/remarks \
+  -H "Content-Type: application/json" \
+  -d '{"remarks": "Board unanimously cleared candidate for Scientist C - ASD."}'
+
+# 5. List Candidate Rankings (filterable by postId and finalRecommendation)
+curl "http://localhost:5000/api/reports?postId=post-asd-sc-c&recommendation=SUITABLE"
+```
+
+### How to Change Weights and Thresholds
+All configuration parameters reside in `server/src/config/reportConfig.js`. Zero magic numbers exist in calculation engines.
+
+```javascript
+// server/src/config/reportConfig.js
+
+// 1. Change question difficulty weights
+DIFFICULTY_WEIGHTS: {
+  EASY: 1.0,
+  MEDIUM: 1.5,
+  HARD: 2.0,
+},
+
+// 2. Adjust overall score blend (must sum to 1.0)
+OVERALL_WEIGHTS: {
+  SKILL_MATCH: 0.20,
+  INTERVIEW: 0.80,
+},
+
+// 3. Change recommendation suitability thresholds
+RECOMMENDATION_BANDS: {
+  SUITABLE: { min: 70 },
+  BORDERLINE: { min: 45, max: 69.99 },
+  NOT_SUITABLE: { max: 44.99 },
+},
+
+// 4. Change question relevancy blend and low-fit floor
+QUESTION_RELEVANCY: {
+  WEIGHT_CANDIDATE: 0.50,
+  WEIGHT_POST: 0.50,
+  LOW_FIT_FLOOR: 0.40,
+}
+```
+
+---
+
 ## Available npm Scripts
 
 | Command | Description |
@@ -520,3 +706,8 @@ curl -X POST http://localhost:5000/api/answers \
 | `npm run test:scorer` | Runs Part 3 answer scorer & edge-case test suite (`scripts/testScorer.js`) |
 | `npm run calibrate:scorer` | Runs Part 3 grid-search calibration advisor (`scripts/calibrateScorer.js`) |
 | `npm run test:persistence` | Runs Part 3 DB persistence & duplicate rejection suite (`scripts/testScorePersistence.js`) |
+| `npm run test:decision` | Runs Part 4 state-machine decision unit tests (`scripts/testDecisionLogic.js`) |
+| `npm run test:simulate` | Runs Part 4 end-to-end adaptive interview simulations (`scripts/simulateInterview.js`) |
+| `npm run test:reportcalc` | Runs Part 5 pure calculation unit tests with 29 test cases (`scripts/testReportCalculator.js`) |
+| `npm run test:qrelevancy` | Runs Part 5 question-relevancy module tests (`scripts/testQuestionRelevancy.js`) |
+| `npm run test:reports` | Runs Part 5 end-to-end report simulation and immutability test suite (`scripts/testReports.js`) |

@@ -4,6 +4,10 @@
  * Ensures that multiple database connections are not spawned across services.
  */
 
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+require('dotenv').config();
+
 const { PrismaClient } = require('@prisma/client');
 
 // Global Prisma Client instance
