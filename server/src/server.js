@@ -15,6 +15,18 @@ const server = app.listen(PORT, () => {
   console.log(`👉 POST http://localhost:${PORT}/api/skill-match`);
   console.log(`👉 POST http://localhost:${PORT}/api/candidates/:id/skills`);
   console.log(`👉 POST http://localhost:${PORT}/api/answers`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/posts`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/candidates`);
+  console.log(`👉 POST http://localhost:${PORT}/api/candidates`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/sessions`);
+  console.log(`👉 POST http://localhost:${PORT}/api/sessions`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/interviews/:sessionId/question`);
+  console.log(`👉 POST http://localhost:${PORT}/api/interviews/:sessionId/terminate`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/reports`);
+  console.log(`👉 GET  http://localhost:${PORT}/api/reports/:sessionId`);
+  console.log(`👉 POST http://localhost:${PORT}/api/reports/:sessionId/remarks`);
+  console.log(`👉 POST http://localhost:${PORT}/api/reports/:sessionId/override`);
+  console.log(`👉 POST http://localhost:${PORT}/api/reports/:sessionId/regenerate`);
 });
 
 module.exports = server;

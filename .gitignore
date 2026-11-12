@@ -6,6 +6,10 @@ node_modules/
 .env
 */.env
 
+# Build outputs
+dist/
+*/dist/
+
 # Logs
 *.log
 npm-debug.log*

@@ -5,6 +5,9 @@ AI-based adaptive interview and candidate screening platform designed for the **
 - **Part 1**: Database Foundation & Normalized Question Bank (Prisma + PostgreSQL)
 - **Part 2**: Skill-Match Suitability Engine & Candidate Screening API (Deterministic, Offline)
 - **Part 3**: Answer Scorer Engine, Calibration Suite & Response Scoring API (Deterministic, Offline)
+- **Part 4**: Adaptive Interview Engine (Backend Core)
+- **Part 5**: Candidate Assessment Report & Final Scoring (Backend Core)
+- **Part 6**: Frontend Development (Examiner Dashboard, Setup Wizard & Boardroom UI)
 
 ---
 
@@ -697,7 +700,11 @@ QUESTION_RELEVANCY: {
 
 | Command | Description |
 | :--- | :--- |
+| `npm run dev` | Starts backend (port 5000) and frontend (port 5173) together using `concurrently` |
 | `npm start` | Launches the Express API server on port 5000 |
+| `npm run client:dev` | Launches the Vite React frontend development server on port 5173 |
+| `npm run client:build` | Compiles production frontend bundle using Vite + Tailwind |
+| `npm run client:preview` | Previews the compiled production build locally |
 | `npm run db:migrate` | Runs `prisma migrate dev` to apply pending migrations |
 | `npm run db:seed` | Idempotently seeds question bank and post skills |
 | `npm run db:reset` | Drops, re-migrates, and seeds the database |
@@ -706,8 +713,226 @@ QUESTION_RELEVANCY: {
 | `npm run test:scorer` | Runs Part 3 answer scorer & edge-case test suite (`scripts/testScorer.js`) |
 | `npm run calibrate:scorer` | Runs Part 3 grid-search calibration advisor (`scripts/calibrateScorer.js`) |
 | `npm run test:persistence` | Runs Part 3 DB persistence & duplicate rejection suite (`scripts/testScorePersistence.js`) |
-| `npm run test:decision` | Runs Part 4 state-machine decision unit tests (`scripts/testDecisionLogic.js`) |
-| `npm run test:simulate` | Runs Part 4 end-to-end adaptive interview simulations (`scripts/simulateInterview.js`) |
-| `npm run test:reportcalc` | Runs Part 5 pure calculation unit tests with 29 test cases (`scripts/testReportCalculator.js`) |
-| `npm run test:qrelevancy` | Runs Part 5 question-relevancy module tests (`scripts/testQuestionRelevancy.js`) |
-| `npm run test:reports` | Runs Part 5 end-to-end report simulation and immutability test suite (`scripts/testReports.js`) |
+| `npm run test:security` | Runs candidate data protection & telemetry isolation test (`scripts/testCandidateProtection.js`) |
+
+---
+
+## Part 6: Frontend Development & Minimal Backend Extensions
+
+Part 6 establishes the complete frontend user experience for the **RAC DRDO Adaptive Interview System**, providing a defense-grade government boardroom interface across:
+1. **Examiner Dashboard** (`/`)
+2. **New Interview Setup Wizard** (`/setup`)
+3. **Adaptive Interview Room with Candidate & Examiner Views** (`/interview/:sessionId`)
+4. **Interview Completion Screen** (`/interview/:sessionId/done`)
+5. **Candidate Evaluation Dossier Report** (`/report/:sessionId`)
+6. **Recruitment Assessment Rankings** (`/reports`)
+
+---
+
+### 1. Installation & Running the Full Application
+
+#### Prerequisites
+- Node.js (v18.x or v20.x recommended)
+- PostgreSQL database
+
+#### Step 1: Root & Server Installation
+```bash
+# Install root convenience scripts and concurrently
+npm install
+
+# Install server dependencies
+cd server && npm install && cd ..
+```
+
+#### Step 2: Client Installation
+```bash
+# Install React, Vite, and Tailwind frontend dependencies
+cd client && npm install && cd ..
+```
+
+#### Step 3: Run Both Applications Simultaneously
+Run backend (port 5000) and frontend (port 5173) concurrently in a single terminal:
+```bash
+npm run dev
+```
+
+Alternatively, run in separate terminals:
+```bash
+# Terminal 1: Backend
+npm start
+
+# Terminal 2: Frontend
+npm run client:dev
+```
+
+Open your browser at `http://localhost:5173`.
+
+---
+
+### 2. Environment Variables
+
+#### Client Configuration (`client/.env`)
+Create `client/.env` (example provided in `client/.env.example`):
+```env
+# Centralized API base URL pointing to the Express server
+VITE_API_URL=http://localhost:5000/api
+```
+
+#### Server Configuration (`server/.env`)
+```env
+# PostgreSQL database connection URL
+DATABASE_URL="postgresql://postgres:password@localhost:5432/rac_interview_db?schema=public"
+PORT=5000
+```
+
+---
+
+### 3. Complete Client Folder Structure
+
+```
+client/
+├── .env.example                # Example client environment variables
+├── .gitignore                  # Client-level build and module ignore rules
+├── index.html                  # HTML entry point with RAC DRDO metadata
+├── package.json                # React 18, Vite, Tailwind CSS, react-router-dom
+├── postcss.config.js           # PostCSS Tailwind plugins
+├── tailwind.config.js          # Government/defence color tokens & typography
+├── vite.config.js              # Vite server & build tooling config (port 5173)
+└── src/
+    ├── main.jsx                # React root mount
+    ├── App.jsx                 # Application layout, router & footer
+    ├── index.css               # Tailwind base, accessible rings, print styles
+    ├── api/
+    │   └── client.js           # Centralized fetch wrapper & typed named API calls
+    ├── hooks/
+    │   ├── useAsync.js         # Generic async lifecycle hook with unmount guard
+    │   └── useInterviewSession.js # Live session observation hook
+    ├── components/
+    │   ├── Header.jsx          # Boardroom top banner with DRDO shield & tricolor stripe
+    │   ├── Gauge.jsx           # Pure SVG semicircular match gauge (no chart libraries)
+    │   ├── BandBadge.jsx       # Accessible suitability badge (STRONG | MODERATE | WEAK)
+    │   ├── ScoreBadge.jsx      # Numeric score percentage pill with color tiers
+    │   ├── VerdictBadge.jsx    # Distinct text + SVG icon verdict badge
+    │   ├── ProgressStrip.jsx   # Live adaptive path difficulty progression strip
+    │   ├── DifficultyChart.jsx # Pure SVG responsive step/line chart with legend
+    │   ├── TopicBar.jsx        # Horizontal topic proficiency bar with classification
+    │   ├── ChipInput.jsx       # Competency tag input with keyboard & suggestion chips
+    │   ├── Collapsible.jsx     # Accessible disclosure panel for calculation formulas
+    │   ├── ConfirmDialog.jsx   # Accessible modal dialog for examiner overrides
+    │   ├── DataTable.jsx       # Responsive table with headers and custom renderers
+    │   ├── Toast.jsx           # Auto-dismissing status notifications
+    │   ├── Spinner.jsx         # Accessible SVG loading indicator
+    │   ├── ErrorState.jsx      # Error banner with retry trigger
+    │   └── EmptyState.jsx      # Empty record placeholder with CTA
+    └── pages/
+        ├── DashboardPage.jsx   # Route / : Executive metrics, cards, recent interviews
+        ├── SetupWizardPage.jsx # Route /setup : 3-phase post selection & skill-match
+        ├── InterviewRoomPage.jsx # Route /interview/:sessionId : Live adaptive interview
+        ├── CompletionPage.jsx  # Route /interview/:sessionId/done : Neutral completion
+        ├── ReportPage.jsx      # Route /report/:sessionId : Print-ready evaluation dossier
+        └── RankingsPage.jsx    # Route /reports : Cross-candidate recruitment rankings
+```
+
+---
+
+### 4. API Documentation: Page-by-Page Consumption
+
+| Page / Route | Consumed API Endpoint | HTTP Method | Named Function (`client.js`) | Description |
+| :--- | :--- | :---: | :--- | :--- |
+| **Dashboard** (`/`) | `/api/sessions` | `GET` | `fetchSessions()` | Retrieves recent interview sessions and candidate counts |
+| **Setup Wizard** (`/setup`) | `/api/posts` | `GET` | `fetchPosts()` | Retrieves available recruitment vacancies and skill weights |
+| **Setup Wizard** (`/setup`) | `/api/candidates` | `POST` | `createCandidate()` | Registers candidate profile |
+| **Setup Wizard** (`/setup`) | `/api/candidates/:id/skills`| `POST` | `saveCandidateSkills()` | Ingests verified candidate competencies |
+| **Setup Wizard** (`/setup`) | `/api/skill-match` | `POST` | `computeSkillMatch()` | Calculates deterministic weighted suitability match |
+| **Setup Wizard** (`/setup`) | `/api/sessions` | `POST` | `createSession()` | Instantiates an interview session |
+| **Interview Room** (`/interview/:sessionId`) | `/api/interviews/:sessionId/question` | `GET` | `fetchInterviewQuestion()` | Retrieves refresh-safe pending question or completion |
+| **Interview Room** (`/interview/:sessionId`) | `/api/answers` | `POST` | `submitAnswer()` | Submits response for deterministic offline evaluation |
+| **Interview Room** (`/interview/:sessionId`) | `/api/interviews/:sessionId/terminate` | `POST` | `terminateInterviewEarly()` | Concludes session early with examiner justification |
+| **Report Dossier** (`/report/:sessionId`) | `/api/reports/:sessionId` | `GET` | `fetchReport()` | Compiles complete candidate evaluation dossier |
+| **Report Dossier** (`/report/:sessionId`) | `/api/reports/:sessionId/remarks` | `POST` | `saveBoardRemarks()` | Persists presiding board observations |
+| **Report Dossier** (`/report/:sessionId`) | `/api/reports/:sessionId/override` | `POST` | `overrideRecommendation()` | Records board recommendation override with audit trail |
+| **Report Dossier** (`/report/:sessionId`) | `/api/reports/:sessionId/regenerate`| `POST` | `regenerateReport()` | Recalculates report and increments report version |
+| **Rankings Archive** (`/reports`) | `/api/reports` | `GET` | `fetchRankings()` | Retrieves comparative ranking table of all dossiers |
+
+---
+
+### 5. Backend Additions & Modified Endpoints
+
+To support Part 6 without altering existing scoring, adaptive, or report engines, minimal REST endpoints were added:
+
+1. **CORS Middleware (`server/src/app.js`)**:
+   - Allows Vite dev origins (`http://localhost:5173`, `http://127.0.0.1:5173`) with explicit header reflections and `OPTIONS` status `204`.
+2. **Posts API (`server/src/routes/postRoutes.js`)**:
+   - `GET /api/posts`: Returns vacancies with required skills, weights, and subject discipline.
+   - `GET /api/posts/:id`: Single post details.
+3. **Candidates API (`server/src/routes/candidateRoutes.js`)**:
+   - `GET /api/candidates`, `POST /api/candidates`, `GET /api/candidates/:id`.
+4. **Sessions API (`server/src/routes/sessionRoutes.js`)**:
+   - `GET /api/sessions`, `POST /api/sessions`, `GET /api/sessions/:id`.
+5. **Interview Execution API (`server/src/routes/interviewRoutes.js`)**:
+   - `GET /api/interviews/:sessionId/question`: Selects next adaptive question or returns pending active question (refresh-safe).
+   - `POST /api/interviews/:sessionId/terminate`: Terminates interview early with reason.
+6. **Reports & Rankings API (`server/src/routes/reportRoutes.js`)**:
+   - `GET /api/reports`: Recruitment rankings across candidate cohorts.
+   - `GET /api/reports/:sessionId`: Evaluation dossier.
+   - `POST /api/reports/:sessionId/remarks`: Committee remarks.
+   - `POST /api/reports/:sessionId/override`: Board recommendation override.
+   - `POST /api/reports/:sessionId/regenerate`: Version bump and dossier recalculation.
+
+---
+
+### 6. Screenshots & Visual Interface Placeholders
+
+```
++--------------------------------------------------------------------------------------------------+
+| RAC DRDO BOARDROOM INTERVIEW SYSTEM                                                              |
++--------------------------------------------------------------------------------------------------+
+|                                                                                                  |
+| [1. Dashboard]                                                                                   |
+|  - Metric cards: Active Interviews (2), Total Vacancies (4), Completed Dossiers (18)              |
+|  - Quick launcher cards: "Start New Assessment" & "Candidate Rankings Archive"                   |
+|  - Recent Interviews Table with pulsing blue ACTIVE indicators and emerald COMPLETED badges      |
+|                                                                                                  |
+| [2. Setup Wizard]                                                                                |
+|  - Phase 1: Grid of Defence Posts showing skill tags (W:5, W:4) and Mandatory badges            |
+|  - Phase 2: Candidate form with ChipInput and one-click post skill quick suggestions             |
+|  - Phase 3: Semicircular SVG Gauge (0-100%), Band Badge, Breakdown Table, Warning Banner         |
+|                                                                                                  |
+| [3. Interview Room — Candidate View (DEFAULT)]                                                   |
+|  - Clean boardroom question card with live ticking timer                                         |
+|  - Accessible answer textarea with live word count                                               |
+|  - Zero scores, zero verdicts, zero difficulty tags, zero engine telemetry displayed             |
+|                                                                                                  |
+| [4. Interview Room — Examiner View (Side Panel)]                                                |
+|  - Real-time ProgressStrip showing Markov difficulty transitions                                 |
+|  - Evaluated scores (Relevancy %, Correctness %, Weighted Answer Score %)                        |
+|  - Verdict badge, Matched Keywords (green), Missing Keywords (red), Flags, Engine Decision Log    |
+|                                                                                                  |
+| [5. Completion Screen]                                                                           |
+|  - Dignified neutral conclusion: "Interview completed. Thank you."                              |
+|  - Direct examiner link: "Examiner: View Report"                                                 |
+|                                                                                                  |
+| [6. Evaluation Dossier Report]                                                                   |
+|  - Overall Composite Score (30% Skill-Match + 70% Interview Score)                               |
+|  - Board recommendation badge with override audit pill                                           |
+|  - Horizontal TopicBar proficiency progress indicators                                           |
+|  - Pure SVG Difficulty Trajectory line chart with verdict color dots and legend                  |
+|  - Expandable Question Evaluation Log with keyword breakdown                                     |
+|  - Print-to-PDF layout with automated navigation removal and boardroom sign-off blocks          |
+|                                                                                                  |
+| [7. Recruitment Rankings]                                                                        |
+|  - Multi-candidate comparative table with post filter, recommendation filter, and score sorting |
++--------------------------------------------------------------------------------------------------+
+```
+
+---
+
+### 7. Security & Telemetry Protection
+
+Automated verification test [`scripts/testCandidateProtection.js`](file:///Users/mohammadmustafa/Desktop/Applicant-Selector-Application/scripts/testCandidateProtection.js) validates:
+- Candidate view contains **zero** scoring, relevancy, correctness, verdict, keyword, or decision leakage.
+- All telemetry is strictly encapsulated within `{isExaminerMode && (...)}`.
+- Run verification command:
+  ```bash
+  npm run test:security
+  ```
