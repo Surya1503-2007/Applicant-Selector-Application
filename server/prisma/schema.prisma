@@ -1,6 +1,8 @@
 // Prisma Schema for RAC DRDO Adaptive Interview System
 // Part 1: Normalized Question Bank & Interview Session Foundation
 // Part 2: Skill-Match Suitability Engine
+// Part 3: Answer Scorer & Evaluation Engine
+// Part 4: Adaptive Interview Engine
 
 generator client {
   provider = "prisma-client-js"
@@ -48,13 +50,14 @@ model Topic {
   @@unique([subjectId, name])
 }
 
-/// Single Question model supporting adaptive follow-ups, keywords, and difficulty tiers
+/// Single Question model supporting adaptive follow-ups, keywords, difficulty tiers, and simplified rephrasings
 model Question {
   id             String      @id @default(uuid())
   topicId        String?
   topic          Topic?      @relation(fields: [topicId], references: [id], onDelete: SetNull)
   difficulty     Difficulty
   questionText   String      @db.Text
+  simplifiedText String?     @db.Text // Simpler rephrasing used when candidate answer is IRRELEVANT
   idealAnswer    String      @db.Text
   keywords       String[]
   parentQId      String?
@@ -80,20 +83,24 @@ model Candidate {
   sessions          Session[]
   skills            CandidateSkill[]
   skillMatchResults SkillMatchResult[]
+  reports           Report[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 }
 
 /// An interview session conducted for a candidate
 model Session {
-  id          String     @id @default(uuid())
-  candidateId String
-  candidate   Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  startTime   DateTime   @default(now())
-  endTime     DateTime?
-  responses   Response[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String        @id @default(uuid())
+  candidateId  String
+  candidate    Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  startTime    DateTime      @default(now())
+  endTime      DateTime?
+  responses    Response[]
+  sessionState SessionState?
+  decisionLogs DecisionLog[]
+  reports      Report[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([candidateId])
 }
@@ -111,10 +118,11 @@ model Response {
   answerScore      Float?
   verdict          String?
   breakdown        Json?
+  isReask          Boolean   @default(false) // Tracks whether this was a simplified re-ask
   timestamp        DateTime  @default(now())
 
-  // Ensures a question cannot be asked more than once in the same session
-  @@unique([sessionId, questionId])
+  // Permits exactly one normal ask (isReask=false) and at most one tracked simplified re-ask (isReask=true) per session
+  @@unique([sessionId, questionId, isReask])
   @@index([sessionId])
   @@index([questionId])
 }
@@ -132,6 +140,7 @@ model Post {
   level             String
   postSkills        PostSkill[]
   skillMatchResults SkillMatchResult[]
+  reports           Report[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -177,6 +186,93 @@ model SkillMatchResult {
   breakdown    Json      // Explainable per-skill details, strengths, gaps, missing mandatory
   createdAt    DateTime  @default(now())
 
+  @@index([candidateId])
+  @@index([postId])
+}
+
+// =========================================================================
+// PART 4: Adaptive Interview Engine Models
+// =========================================================================
+
+/// State machine tracker for an active adaptive interview session
+model SessionState {
+  id                    String      @id @default(uuid())
+  sessionId             String      @unique
+  session               Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  currentTopicId        String?
+  currentDifficulty     Difficulty?
+  currentQuestionId     String?
+  phase                 String      @default("ICEBREAKER") // ICEBREAKER | TECHNICAL | COMPLETED
+  technicalCount        Int         @default(0)
+  icebreakerCount       Int         @default(0)
+  consecutiveIrrelevant Int         @default(0)
+  topicProgress         Json        @default("{}") // { [topicId]: { easyAsked, mediumAsked, hardAsked, finished, lastVerdict, reaskUsed } }
+  status                String      @default("ACTIVE") // ACTIVE | COMPLETED
+  endReason             String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+/// Explainable decision log tracking every state machine transition
+model DecisionLog {
+  id             String   @id @default(uuid())
+  sessionId      String
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  step           Int
+  questionId     String?
+  verdict        String?  // IRRELEVANT | PARTIAL | STRONG | NOT_SCORED
+  fromDifficulty String?  // EASY | MEDIUM | HARD
+  toDifficulty   String?  // EASY | MEDIUM | HARD
+  action         String   // NEXT_HARDER | NEXT_SAME | NEXT_EASIER | REASK_SIMPLIFIED | NEXT_TOPIC | ICEBREAKER | END
+  reason         String   @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([sessionId, step])
+}
+
+// =========================================================================
+// PART 5: Session Report and Final Scoring Models
+// =========================================================================
+
+/// Comprehensive, immutable assessment report snapshot generated upon interview completion
+model Report {
+  id                     String    @id @default(uuid())
+  sessionId              String
+  session                Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  candidateId            String
+  candidate              Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  postId                 String
+  post                   Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  version                Int       @default(1)
+  generatedAt            DateTime  @default(now())
+  configSnapshot         Json      // The config values used, so later changes never alter old reports
+  skillMatchPercent      Float
+  skillMatchBand         String
+  mandatoryGap           Boolean
+  missingMandatory       Json
+  interviewScore         Float
+  overallScore           Float
+  systemRecommendation   String    // Computed, never edited
+  finalRecommendation    String    // Equals system value unless the board overrides
+  terminatedEarly        Boolean   @default(false)
+  endReason              String?
+  questionRelevancyScore Float
+  questionRelevancyBand  String
+  topicScores            Json
+  questionTable          Json
+  difficultyProgression  Json
+  flags                  Json
+  decisionLog            Json      // Snapshot of the Part 4 audit trail
+  boardRemarks           String?   @db.Text
+  overriddenBy           String?
+  overriddenAt           DateTime?
+  overrideReason         String?   @db.Text
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@unique([sessionId, version])
+  @@index([sessionId])
   @@index([candidateId])
   @@index([postId])
 }

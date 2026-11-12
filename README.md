@@ -338,6 +338,81 @@ curl -X POST http://localhost:5000/api/skill-match \
 
 ## Part 3: Answer Scorer Module
 
+---
+
+## Part 4: Adaptive Interview Engine
+
+### Objective
+Run an interview session as a deterministic state‑machine. The engine selects questions based on the candidate’s answer verdicts (IRRELEVANT | PARTIAL | STRONG) and enforces the adaptive ladder:
+
+- **Phase 1 – Icebreakers** – configurable number of ICEBREAKER questions (default 2). They are stored with `NOT_SCORED` and do not affect difficulty.
+- **Phase 2 – Technical ladder** – for each topic the flow is:
+  - **EASY** → verdict determines whether we stay on EASY, move to MEDIUM, or re‑ask a simplified version.
+  - **MEDIUM** → similar logic, moving to HARD on a STRONG verdict.
+  - **HARD** → topic finishes on IRRELEVANT/PARTIAL or on STRONG (mastered).
+- **Stop conditions** – configurable caps such as `maxQuestions` (default 10), `maxConsecutiveIrrelevant` (default 3), topic‑question caps, and overall pool exhaustion. The engine logs the decision reason and stores it in `DecisionLog`.
+
+All thresholds/caps live in `src/config/engineConfig.js` – no magic numbers elsewhere.
+
+### Core Files
+- `src/config/engineConfig.js` – configuration constants.
+- `src/engine/adaptiveEngine.js` – pure `decideNext` function implementing the rules, fallback handling, and hard guarantees.
+- `src/services/interviewService.js` – orchestrates session lifecycle, calls `adaptiveEngine`, records responses (`isReask` flag), and persists `SessionState` & `DecisionLog`.
+- `src/routes/interviewRoutes.js` – Express endpoints:
+  - `POST /api/interviews/start` – creates a session and returns the first question.
+  - `GET /api/interviews/:sessionId/question` – fetches the current question.
+  - `POST /api/interviews/:sessionId/answer` – records answer, runs decision logic, and returns the next question or completion flag.
+  - `GET /api/interviews/:sessionId/state` – full interview state + decision log.
+  - `POST /api/interviews/:sessionId/end` – early termination.
+
+### Running Tests & Simulation
+```bash
+# unit‑test suite for decision logic (covers >20 branches)
+npm run test:decision
+
+# end‑to‑end interview simulation with four candidate archetypes
+npm run test:simulate
+```
+
+Both scripts assert the hard guarantees (no duplicate questions, difficulty only increments by one level, re‑ask counted separately, early‑stop conditions).
+
+### Sample API Flow (cURL)
+```bash
+# 1️⃣ Start interview (candidate & post must exist)
+curl -X POST http://localhost:5000/api/interviews/start \
+  -H "Content-Type: application/json" \
+  -d '{"candidateId":"<candidate-id>","postId":"<post-id>"}'
+
+# 2️⃣ Get current question
+curl http://localhost:5000/api/interviews/<session-id>/question
+
+# 3️⃣ Submit answer
+curl -X POST http://localhost:5000/api/interviews/<session-id>/answer \
+  -H "Content-Type: application/json" \
+  -d '{"answerText":"my answer"}'
+
+# 4️⃣ Fetch interview state (includes decision log & end reason)
+curl http://localhost:5000/api/interviews/<session-id>/state
+
+# 5️⃣ End interview early (optional)
+curl -X POST http://localhost:5000/api/interviews/<session-id>/end \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"CANDIDATE_STRUGGLING"}'
+```
+
+### Tweaking the Engine
+All adaptive parameters are in `src/config/engineConfig.js`:
+- `ICEBREAKER_COUNT`
+- `MAX_QUESTIONS`
+- `MAX_CONSECUTIVE_IRRELEVANT`
+- `MAX_EASY_PER_TOPIC`, `MAX_MEDIUM_PER_TOPIC`
+- `DIFFICULTY_ORDER` (EASY → MEDIUM → HARD)
+- fallback strategies, etc.
+
+Update these values and restart the server to apply new behavior.
+
+---
+
 ### Objective
 Given an interview question and a candidate's free-text answer, deterministically compute an explainable **Relevancy** (`0..1`), **Correctness** (`0..1`), weighted **Answer Score** (`0..1`), and **Verdict** (`IRRELEVANT` | `PARTIAL` | `STRONG`), while enforcing anti-gaming rules and persisting the evaluation to PostgreSQL.
 
@@ -430,6 +505,192 @@ curl -X POST http://localhost:5000/api/answers \
     "keywordDensity": 0.4074,
     "flags": []
   }
+}
+```
+
+---
+
+## Part 5: Session Report and Final Scoring
+
+### Objective
+When an adaptive interview concludes (normally, early due to struggling, or via board termination), Part 5 deterministically generates an explainable, audit-ready assessment report snapshot. The report combines the candidate's Part 2 skill-match suitability, the difficulty-weighted Part 3 interview score, topic-wise strengths and weaknesses, an informational question-relevancy score, anti-gaming flags, and the Part 4 decision audit trail into an immutable database record.
+
+### Formulas & Scoring Rules Reference
+
+| Metric | Formula / Logic | Default Weights & Thresholds | Behavior & Guarantees |
+| :--- | :--- | :--- | :--- |
+| **Weighted Interview Score** | $100 \times \frac{\sum (w_{\text{diff}} \times \text{answerScore})}{\sum w_{\text{diff}}}$ | EASY: `1.0`<br>MEDIUM: `1.5`<br>HARD: `2.0` | **Technical questions only**. ICEBREAKER questions are excluded and shown unscored. Re-asked questions count **only the final attempt** (`isReask=true`). No zero-division on empty sessions. |
+| **Topic-Wise Scores** | $100 \times \frac{\sum (w_{\text{diff}} \times \text{answerScore})}{\sum w_{\text{diff}}}$ (per topic) | STRENGTH: $\ge 70$<br>AVERAGE: $45 - 69.99$<br>WEAKNESS: $< 45$<br>NOT_ASSESSED: $0$ questions | Records topic score, questions count, highest difficulty reached, highest difficulty answered `STRONG`, and classification label. Topics without questions are labeled `NOT_ASSESSED` (score: `null`). |
+| **Overall Suitability Score** | $w_{\text{Skill}} \times \text{skillMatchPercent} + w_{\text{Interview}} \times \text{interviewScore}$ | $w_{\text{Skill}} = 0.20$<br>$w_{\text{Interview}} = 0.80$ | Blended composite suitability score ($0$ to $100$). Mandatory-skill gap from Part 2 is carried as an audit warning and strictly does **not** change this score. |
+| **System Recommendation** | $\ge 70$: `SUITABLE`<br>$45 - 69.99$: `BORDERLINE`<br>$< 45$: `NOT_SUITABLE` | Early termination cap: `BORDERLINE` | Early-ended interviews (`CANDIDATE_STRUGGLING` or `BOARD_TERMINATED`) score only answered questions, set `terminatedEarly=true`, and **cap the recommendation at BORDERLINE** (never `SUITABLE`). |
+| **Question-Relevancy Score** | $w_{\text{Cand}} \times \text{candidateFit} + w_{\text{Post}} \times \text{postFit}$<br>Session: $100 \times \text{avg}(\text{questionRelevancy})$ | $w_{\text{Cand}} = 0.50$<br>$w_{\text{Post}} = 0.50$<br>Floor: $0.40$<br>HIGH: $\ge 70$, MED: $40-69.99$, LOW: $<40$ | `candidateFit`: average best similarity of keywords + topic against candidate skills.<br>`postFit`: average best similarity against post skills (weight-adjusted by skill weight). Flagged as `LOW_FIT_QUESTION` if $< 0.40$. **Informational only; does not alter overallScore**. |
+
+### Immutability & Versioning Architecture
+Reports are persisted as immutable historical snapshots in the `Report` table with a composite key `@@unique([sessionId, version])`.
+- Once generated, modifying runtime configuration constants will **never alter existing report snapshots**.
+- Re-running report generation is idempotent by default (`regenerate=false` returns the existing report).
+- Explicit re-scoring (`regenerate=true`) increments the `version` counter and archives the new snapshot while keeping all previous versions accessible.
+- Assessment board recommendation overrides preserve `systemRecommendation` untouched, assign `finalRecommendation`, and enforce an audit record (`overriddenBy`, `overriddenAt`, and mandatory `overrideReason`).
+
+### Sample Report JSON (`GET /api/interviews/:sessionId/report`)
+```json
+{
+  "id": "e4f81c9a-1234-4567-89ab-cdef01234567",
+  "sessionId": "27193492-acf6-4cce-9d7f-89682c95163c",
+  "candidateId": "cand-001",
+  "postId": "post-asd-sc-c",
+  "version": 1,
+  "generatedAt": "2026-11-12T08:35:00.000Z",
+  "skillMatchPercent": 95.0,
+  "skillMatchBand": "STRONG",
+  "mandatoryGap": false,
+  "missingMandatory": [],
+  "interviewScore": 84.12,
+  "overallScore": 86.3,
+  "systemRecommendation": "SUITABLE",
+  "finalRecommendation": "SUITABLE",
+  "terminatedEarly": false,
+  "endReason": "MAX_QUESTIONS_REACHED",
+  "questionRelevancyScore": 82.38,
+  "questionRelevancyBand": "HIGH",
+  "topicScores": [
+    {
+      "topicId": "asd-top-req",
+      "topicName": "Requirements Analysis",
+      "score": 85.63,
+      "questionsCount": 3,
+      "highestDifficultyReached": "HARD",
+      "highestDifficultyStrong": "HARD",
+      "label": "STRENGTH"
+    },
+    {
+      "topicId": "asd-top-arch",
+      "topicName": "System Architecture",
+      "score": 82.85,
+      "questionsCount": 3,
+      "highestDifficultyReached": "HARD",
+      "highestDifficultyStrong": "HARD",
+      "label": "STRENGTH"
+    },
+    {
+      "topicId": "asd-top-vv",
+      "topicName": "Verification & Validation",
+      "score": 84.29,
+      "questionsCount": 3,
+      "highestDifficultyReached": "HARD",
+      "highestDifficultyStrong": "HARD",
+      "label": "STRENGTH"
+    },
+    {
+      "topicId": "asd-top-iface",
+      "topicName": "Interface Management",
+      "score": 82.36,
+      "questionsCount": 1,
+      "highestDifficultyReached": "EASY",
+      "highestDifficultyStrong": "EASY",
+      "label": "STRENGTH"
+    }
+  ],
+  "difficultyProgression": [
+    { "step": 1, "difficulty": "EASY", "verdict": "STRONG", "isReask": false, "answerScore": 0.886 },
+    { "step": 2, "difficulty": "MEDIUM", "verdict": "STRONG", "isReask": false, "answerScore": 0.8162 },
+    { "step": 3, "difficulty": "HARD", "verdict": "STRONG", "isReask": false, "answerScore": 0.8715 }
+  ],
+  "flags": {
+    "counts": {
+      "TOO_SHORT": 0,
+      "KEYWORD_STUFFING": 0,
+      "NO_ANSWER": 0,
+      "REASKED": 0,
+      "LOW_FIT_QUESTION": 0
+    },
+    "mandatoryGap": false,
+    "terminatedEarly": false,
+    "activeFlags": [],
+    "summaryText": "Clean session: no anomalies or anti-gaming flags triggered."
+  },
+  "boardRemarks": null,
+  "overriddenBy": null,
+  "overriddenAt": null,
+  "overrideReason": null
+}
+```
+
+### Running Part 5 Tests
+
+```bash
+# 1️⃣ Pure calculator unit tests (29 assertions: weighting, zero-division, boundaries, early-cap)
+npm run test:reportcalc
+
+# 2️⃣ Question-relevancy module tests (matching vs unrelated candidate, decoupling assertion)
+npm run test:qrelevancy
+
+# 3️⃣ End-to-end integration tests (strong, weak, mixed, collapse simulations, override, immutability)
+npm run test:reports
+```
+
+### Express API Endpoints & cURL Examples
+
+```bash
+# 1. Generate Report for a completed session (idempotent, reject if ACTIVE)
+curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report \
+  -H "Content-Type: application/json" \
+  -d '{"regenerate": false}'
+
+# 2. Retrieve Full Assessment Report (latest or specific version)
+curl http://localhost:5000/api/interviews/<SESSION_ID>/report
+curl "http://localhost:5000/api/interviews/<SESSION_ID>/report?version=1"
+
+# 3. Assessment Board Recommendation Override (reason is mandatory)
+curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report/override \
+  -H "Content-Type: application/json" \
+  -d '{
+    "newRecommendation": "BORDERLINE",
+    "reason": "Candidate exhibited strong theoretical knowledge but demonstrated hesitation on redundant bus architecture during oral interview.",
+    "remarks": "Recommended for probationary appointment under scientist supervision.",
+    "overriddenBy": "Dr. Assessment Board Chair"
+  }'
+
+# 4. Add or Update Board Remarks
+curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report/remarks \
+  -H "Content-Type: application/json" \
+  -d '{"remarks": "Board unanimously cleared candidate for Scientist C - ASD."}'
+
+# 5. List Candidate Rankings (filterable by postId and finalRecommendation)
+curl "http://localhost:5000/api/reports?postId=post-asd-sc-c&recommendation=SUITABLE"
+```
+
+### How to Change Weights and Thresholds
+All configuration parameters reside in `server/src/config/reportConfig.js`. Zero magic numbers exist in calculation engines.
+
+```javascript
+// server/src/config/reportConfig.js
+
+// 1. Change question difficulty weights
+DIFFICULTY_WEIGHTS: {
+  EASY: 1.0,
+  MEDIUM: 1.5,
+  HARD: 2.0,
+},
+
+// 2. Adjust overall score blend (must sum to 1.0)
+OVERALL_WEIGHTS: {
+  SKILL_MATCH: 0.20,
+  INTERVIEW: 0.80,
+},
+
+// 3. Change recommendation suitability thresholds
+RECOMMENDATION_BANDS: {
+  SUITABLE: { min: 70 },
+  BORDERLINE: { min: 45, max: 69.99 },
+  NOT_SUITABLE: { max: 44.99 },
+},
+
+// 4. Change question relevancy blend and low-fit floor
+QUESTION_RELEVANCY: {
+  WEIGHT_CANDIDATE: 0.50,
+  WEIGHT_POST: 0.50,
+  LOW_FIT_FLOOR: 0.40,
 }
 ```
 

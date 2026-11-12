@@ -5,9 +5,12 @@
  * populates the database idempotently (running multiple times produces identical state).
  */
 
-const { PrismaClient } = require('@prisma/client');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config();
+
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -81,6 +84,7 @@ async function seedSubjectData(seedData) {
         topicId: q.topicId || null,
         difficulty: q.difficulty,
         questionText: q.questionText,
+        simplifiedText: q.simplifiedText || null,
         idealAnswer: q.idealAnswer,
         keywords: q.keywords,
         parentQId: null,
@@ -91,6 +95,7 @@ async function seedSubjectData(seedData) {
         topicId: q.topicId || null,
         difficulty: q.difficulty,
         questionText: q.questionText,
+        simplifiedText: q.simplifiedText || null,
         idealAnswer: q.idealAnswer,
         keywords: q.keywords,
         parentQId: null,
@@ -107,6 +112,7 @@ async function seedSubjectData(seedData) {
         topicId: q.topicId || null,
         difficulty: q.difficulty,
         questionText: q.questionText,
+        simplifiedText: q.simplifiedText || null,
         idealAnswer: q.idealAnswer,
         keywords: q.keywords,
         parentQId: q.parentQId,
@@ -117,6 +123,7 @@ async function seedSubjectData(seedData) {
         topicId: q.topicId || null,
         difficulty: q.difficulty,
         questionText: q.questionText,
+        simplifiedText: q.simplifiedText || null,
         idealAnswer: q.idealAnswer,
         keywords: q.keywords,
         parentQId: q.parentQId,
