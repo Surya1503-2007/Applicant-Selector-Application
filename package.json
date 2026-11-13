@@ -17,12 +17,13 @@
     "test:scorer": "npm --prefix server run test:scorer",
     "calibrate:scorer": "npm --prefix server run calibrate:scorer",
     "test:persistence": "npm --prefix server run test:persistence",
-    "test:security": "node scripts/testCandidateProtection.js"
     "test:decision": "npm --prefix server run test:decision",
     "test:simulate": "npm --prefix server run test:simulate",
     "test:reportcalc": "npm --prefix server run test:reportcalc",
     "test:qrelevancy": "npm --prefix server run test:qrelevancy",
-    "test:reports": "npm --prefix server run test:reports"
+    "test:reports": "npm --prefix server run test:reports",
+    "test:security": "node scripts/testCandidateProtection.js",
+    "test:all": "npm run test:db && npm run test:skillmatch && npm run test:scorer && npm run test:persistence && npm run test:decision && npm run test:simulate && npm run test:reportcalc && npm run test:qrelevancy && npm run test:reports && npm run test:security"
   },
   "keywords": [
     "drdo",
