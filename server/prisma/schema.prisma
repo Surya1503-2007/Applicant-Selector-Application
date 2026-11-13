@@ -236,7 +236,47 @@ model DecisionLog {
 // =========================================================================
 
 /// Comprehensive, immutable assessment report snapshot generated upon interview completion
-model Report {
+/// User accounts for examiners and admins
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  username    String   @unique
+  passwordHash String
+  role        Role
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  auditLogs   AuditLog[]
+}
+
+enum Role {
+  ADMIN
+  EXAMINER
+}
+
+/// Audit log entries for critical actions
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entityType String?
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+}
+
+/// One‑time token that a candidate uses to access their interview session
+model CandidateAccess {
+  id        String   @id @default(uuid())
+  sessionId String   @unique
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+
   id                     String    @id @default(uuid())
   sessionId              String
   session                Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
