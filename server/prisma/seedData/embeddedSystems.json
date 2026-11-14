@@ -1,0 +1,189 @@
+{
+  "subject": {
+    "id": "esd-sub-002",
+    "name": "Embedded Systems Design"
+  },
+  "topics": [
+    {
+      "id": "esd-top-rtos",
+      "name": "RTOS & Concurrency"
+    },
+    {
+      "id": "esd-top-buses",
+      "name": "Hardware Interfaces & Avionics Buses"
+    },
+    {
+      "id": "esd-top-safety",
+      "name": "Fault Tolerance & Hardware Reliability"
+    }
+  ],
+  "questions": [
+    {
+      "id": "esd-rtos-e1",
+      "topicId": "esd-top-rtos",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "Explain the concept of priority inversion in real-time operating systems (RTOS) and describe how the Priority Inheritance Protocol mitigates it.",
+      "simplifiedText": "In simple terms: What happens when a low-priority task blocks a high-priority task, and how does temporarily raising its priority solve this?",
+      "idealAnswer": "Priority inversion occurs when a low-priority task holds a shared resource needed by a high-priority task, and a medium-priority task preempts the low-priority task, indirectly delaying the high-priority task indefinitely. The Priority Inheritance Protocol resolves this by dynamically elevating the priority of the resource-holding low-priority task to match that of the blocked high-priority task until the critical section is released.",
+      "keywords": [
+        "priority inversion",
+        "priority inheritance protocol",
+        "RTOS",
+        "preemption",
+        "critical section",
+        "shared mutex"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "esd-rtos-m1",
+      "topicId": "esd-top-rtos",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "Compare Rate Monotonic Scheduling (RMS) with Earliest Deadline First (EDF) in hard real-time defense applications. What are their respective utilization bounds?",
+      "simplifiedText": "Simply put: Compare fixed-priority (RMS) vs dynamic-priority (EDF) scheduling, and how much CPU utilization each can safely guarantee without missing deadlines.",
+      "idealAnswer": "RMS is a static fixed-priority preemptive scheduling algorithm where task priority is inversely proportional to period, with Liu and Layland's utilization bound approaching ln(2) approx 69.3% for large n. EDF is dynamic-priority assigning highest priority to the earliest absolute deadline, achieving up to 100% theoretical CPU utilization for independent periodic tasks, though RMS is often favored in defense avionics for deterministic overload predictability.",
+      "keywords": [
+        "Rate Monotonic Scheduling",
+        "RMS",
+        "Earliest Deadline First",
+        "EDF",
+        "hard real-time",
+        "CPU utilization bound",
+        "deterministic scheduling"
+      ],
+      "parentQId": "esd-rtos-e1"
+    },
+    {
+      "id": "esd-rtos-h1",
+      "topicId": "esd-top-rtos",
+      "difficulty": "HARD",
+      "levelTag": "TECHNICAL",
+      "questionText": "How do you achieve bounded, deterministic interrupt latency in a dual-core asymmetric multiprocessing (AMP) architecture running flight control software?",
+      "simplifiedText": "In advanced terms: How do you guarantee the exact maximum time a flight controller takes to handle an interrupt when two processor cores share resources?",
+      "idealAnswer": "Bounded interrupt latency in AMP is achieved by dedicating real-time interrupt processing exclusively to one core with interrupts disabled for strictly bounded cycles, using cache partitioning or locking (e.g., L2 cache stashing) to prevent cache thrashing from the secondary core, pinning memory buffers to tightly-coupled memory (TCM) to eliminate bus contention, and avoiding inter-processor cross-talk locks in ISR paths.",
+      "keywords": [
+        "interrupt latency",
+        "asymmetric multiprocessing",
+        "AMP",
+        "cache partitioning",
+        "tightly-coupled memory",
+        "deterministic execution",
+        "flight control"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "esd-bus-e1",
+      "topicId": "esd-top-buses",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "Explain the role of Bus Controller (BC), Remote Terminal (RT), and Bus Monitor (BM) in a dual-redundant MIL-STD-1553B avionics data bus.",
+      "simplifiedText": "In plain words: What are the three main roles on a 1553B military bus, and what does each one do?",
+      "idealAnswer": "In MIL-STD-1553B, the Bus Controller initiates all data transfers, commanding transfers and polling terminals on dual-redundant channels (A and B). Remote Terminals are subsystem interfaces (like radar or mission computer) that receive commands and transmit or receive 16-bit word packets. The Bus Monitor listens passively to all bus traffic for flight data recording or telemetry without participating in transfers.",
+      "keywords": [
+        "MIL-STD-1553B",
+        "Bus Controller",
+        "Remote Terminal",
+        "Bus Monitor",
+        "dual-redundant bus",
+        "command-response protocol"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "esd-bus-m1",
+      "topicId": "esd-top-buses",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "How does ARINC 429 differ from MIL-STD-1553B in topology, data rate, and directional transmission?",
+      "simplifiedText": "Simply put: Compare ARINC 429 and MIL-STD-1553B in terms of how wires connect, data speed, and whether communication is one-way or two-way.",
+      "idealAnswer": "ARINC 429 is a point-to-point or broadcast simplex (unidirectional) bus consisting of one transmitter and up to 20 receivers over shielded twisted-pair wire at either 12.5 kbps or 100 kbps using 32-bit words with label identifiers. MIL-STD-1553B is a command-response, half-duplex, dual-redundant shared multidrop bus operating at 1 Mbps with up to 31 addressable Remote Terminals coordinated by a master Bus Controller.",
+      "keywords": [
+        "ARINC 429",
+        "MIL-STD-1553B",
+        "simplex",
+        "half-duplex",
+        "point-to-point",
+        "multidrop",
+        "data rate"
+      ],
+      "parentQId": "esd-bus-e1"
+    },
+    {
+      "id": "esd-bus-h1",
+      "topicId": "esd-top-buses",
+      "difficulty": "HARD",
+      "levelTag": "TECHNICAL",
+      "questionText": "Design an automatic switchover mechanism between primary and secondary channels on a dual-redundant MIL-STD-1553B bus when status word errors or message timeouts occur.",
+      "simplifiedText": "In advanced terms: How should a mission computer detect when Channel A fails on a military bus and seamlessly switch traffic to Channel B without dropping commands?",
+      "idealAnswer": "The Bus Controller detects channel degradation via hardware parity checks, Manchester encoding invalidity, or message response timeout (typically 14 microseconds). Upon consecutive failed retries (typically 1 or 2) on Channel A, the BC driver flags Channel A as degraded, logs the event to flight recorder telemetry, and immediately shifts subsequent frame transfers to redundant Channel B while executing periodic low-priority background ping probes on Channel A to detect recovery.",
+      "keywords": [
+        "dual-redundant switchover",
+        "channel degradation",
+        "message timeout",
+        "Manchester encoding",
+        "Bus Controller failover",
+        "channel redundancy"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "esd-safe-e1",
+      "topicId": "esd-top-safety",
+      "difficulty": "EASY",
+      "levelTag": "TECHNICAL",
+      "questionText": "What is a windowed watchdog timer (WWDT), and why is it superior to a standard watchdog timer in safety-critical embedded systems?",
+      "simplifiedText": "In simple words: What is a windowed watchdog timer, and why is checking that software refreshes it neither too late nor too early safer than a standard watchdog?",
+      "idealAnswer": "A windowed watchdog timer requires the software to refresh (kick) the timer within a specific time window—neither too late nor too early. If refreshed before the lower window boundary (e.g., due to runaway code stuck in a tight loop) or after the upper window boundary (due to hung task or deadlock), it triggers a hardware system reset, unlike standard watchdogs which only detect late refreshes.",
+      "keywords": [
+        "windowed watchdog timer",
+        "WWDT",
+        "watchdog refresh",
+        "runaway code",
+        "hardware reset",
+        "fail-safe"
+      ],
+      "parentQId": null
+    },
+    {
+      "id": "esd-safe-m1",
+      "topicId": "esd-top-safety",
+      "difficulty": "MEDIUM",
+      "levelTag": "TECHNICAL",
+      "questionText": "Explain the architecture and voting mechanism of Triple Modular Redundancy (TMR) for mitigating single-event upsets (SEU) in flight-critical FPGA designs.",
+      "simplifiedText": "Simply put: How does TMR run three identical circuits and use a majority voter to ignore radiation-induced memory bit flips?",
+      "idealAnswer": "TMR triplicates critical sequential logic and registers into three identical redundant domains (A, B, and C) whose outputs feed into majority voters (2-out-of-3 voting logic). If an ionizing particle causes an SEU flip in one register, the majority voter outputs the correct state without system interruption. For robust defense applications, distributed feedback voters and periodic scrubbing are employed to prevent error accumulation.",
+      "keywords": [
+        "Triple Modular Redundancy",
+        "TMR",
+        "single-event upset",
+        "SEU",
+        "majority voter",
+        "2-out-of-3",
+        "FPGA reliability"
+      ],
+      "parentQId": "esd-safe-e1"
+    },
+    {
+      "id": "esd-safe-h1",
+      "topicId": "esd-top-safety",
+      "difficulty": "HARD",
+      "levelTag": "TECHNICAL",
+      "questionText": "How do you implement fail-operational vs fail-safe behavior in a fly-by-wire actuator controller when an undetected sensor bias drift is encountered?",
+      "simplifiedText": "In advanced terms: How does a flight actuator computer decide whether to continue operating degraded or shut down safely when sensor values slowly drift off target?",
+      "idealAnswer": "In fly-by-wire systems, fail-operational capability requires cross-channel sensor analytical redundancy (e.g., parity equations, Kalman filter innovation monitoring, or triplex sensor comparison). When sensor bias drift exceeds a calibrated sigma threshold, mid-value selection (MVS) discards the drifting sensor, allowing full operational authority. If further degradation leaves only two sensors that disagree, the system transitions to fail-safe mode: reverting to a secondary backup damping mode or locking actuator position to prevent uncommanded control surface hardovers.",
+      "keywords": [
+        "fail-operational",
+        "fail-safe",
+        "fly-by-wire",
+        "analytical redundancy",
+        "Kalman filter innovation",
+        "sensor bias drift",
+        "actuator controller"
+      ],
+      "parentQId": null
+    }
+  ]
+}
