@@ -262,5 +262,43 @@ router.post('/questions/relevancy-preview', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/admin/subjects/import
+ * Validates, dry-runs, and imports a subject curriculum bundle (topics and questions) from JSON.
+ * Query param: ?dryRun=true (optional)
+ * Body: { subject: { name, id? }, topics: [...], questions: [...] }
+ */
+const { importSubjectBundle } = require('../services/bundleImportService');
+
+router.post('/admin/subjects/import', async (req, res) => {
+  try {
+    const dryRun = req.query.dryRun === 'true' || req.body.dryRun === true;
+    const bundle = req.body.bundle || req.body;
+
+    const result = await importSubjectBundle(bundle, { dryRun });
+
+    if (!result.valid) {
+      return res.status(400).json({
+        success: false,
+        dryRun: result.dryRun,
+        errors: result.errors,
+        warnings: result.warnings,
+        preview: result.preview,
+      });
+    }
+
+    return res.status(dryRun ? 200 : 201).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: 'Subject bundle import failed.',
+      details: error.message,
+    });
+  }
+});
+
 module.exports = router;
 

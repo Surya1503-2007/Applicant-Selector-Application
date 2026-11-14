@@ -13,6 +13,7 @@ import InterviewRoomPage from './pages/InterviewRoomPage';
 import CompletionPage from './pages/CompletionPage';
 import ReportPage from './pages/ReportPage';
 import RankingsPage from './pages/RankingsPage';
+import AdminSubjectsPage from './pages/AdminSubjectsPage';
 
 function NotFoundPage() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/interview/:sessionId/done" element={<CompletionPage />} />
             <Route path="/report/:sessionId" element={<ReportPage />} />
             <Route path="/reports" element={<RankingsPage />} />
+            <Route path="/admin/subjects" element={<AdminSubjectsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

@@ -196,7 +196,11 @@ async function main() {
     const asdData = loadSeedData('asd.json');
     await seedSubjectData(asdData);
 
-    // 2. Load and seed Posts & Required Skills
+    // 2. Load and seed Embedded Systems Design curriculum
+    const esdData = loadSeedData('embeddedSystems.json');
+    await seedSubjectData(esdData);
+
+    // 3. Load and seed Posts & Required Skills
     const postsData = loadSeedData('posts.json');
     await seedPostsData(postsData);
 

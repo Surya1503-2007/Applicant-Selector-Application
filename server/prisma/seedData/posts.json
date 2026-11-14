@@ -56,6 +56,48 @@
         "isMandatory": false
       }
     ]
+  },
+  {
+    "id": "post-esd-sc-c",
+    "title": "Scientist 'C' - Embedded Systems Design",
+    "subjectId": "esd-sub-002",
+    "level": "Scientist 'C'",
+    "skills": [
+      {
+        "skillName": "Real-Time Operating Systems (RTOS) & Concurrency",
+        "weight": 5,
+        "isMandatory": true
+      },
+      {
+        "skillName": "MIL-STD-1553B & ARINC 429 Avionics Buses",
+        "weight": 5,
+        "isMandatory": true
+      },
+      {
+        "skillName": "Hardware Fault Tolerance & Watchdog Systems",
+        "weight": 4,
+        "isMandatory": true
+      },
+      {
+        "skillName": "Triple Modular Redundancy (TMR) FPGA Architecture",
+        "weight": 4,
+        "isMandatory": false
+      },
+      {
+        "skillName": "Fly-By-Wire Actuator Control & Safety Failover",
+        "weight": 4,
+        "isMandatory": false
+      },
+      {
+        "skillName": "Interrupt Latency & Asymmetric Multiprocessing (AMP)",
+        "weight": 3,
+        "isMandatory": false
+      },
+      {
+        "skillName": "Rate Monotonic Scheduling (RMS) & EDF Analysis",
+        "weight": 3,
+        "isMandatory": false
+      }
+    ]
   }
 ]
-

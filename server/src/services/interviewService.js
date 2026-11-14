@@ -63,8 +63,37 @@ function sanitizeQuestionForCandidate(question, isReask = false) {
 async function getPoolAvailability(sessionId, currentQuestionId = null) {
   const askedIds = await sessionService.getAskedQuestionIds(sessionId);
 
-  // Load all topics in order
+  // Identify subject domain for this session via candidate's latest skill match or post applied
+  let subjectId = null;
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      candidate: {
+        include: {
+          skillMatchResults: { orderBy: { createdAt: 'desc' }, take: 1, include: { post: true } },
+        },
+      },
+    },
+  });
+
+  if (session?.candidate?.skillMatchResults?.[0]?.post?.subjectId) {
+    subjectId = session.candidate.skillMatchResults[0].post.subjectId;
+  } else if (session?.candidate?.postApplied) {
+    const matchedPost = await prisma.post.findFirst({
+      where: {
+        OR: [
+          { id: session.candidate.postApplied },
+          { title: session.candidate.postApplied },
+        ],
+      },
+    });
+    if (matchedPost) subjectId = matchedPost.subjectId;
+  }
+
+  // Load topics in order (scoped to subject if resolved, or all topics as fallback)
+  const topicWhere = subjectId ? { subjectId } : {};
   const topics = await prisma.topic.findMany({
+    where: topicWhere,
     orderBy: { createdAt: 'asc' },
     select: { id: true, name: true },
   });
@@ -75,7 +104,7 @@ async function getPoolAvailability(sessionId, currentQuestionId = null) {
     where: {
       id: { notIn: askedIds },
       levelTag: { not: 'ICEBREAKER' },
-      topicId: { not: null },
+      topicId: { in: topicOrder },
     },
     select: {
       id: true,
