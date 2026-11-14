@@ -554,3 +554,67 @@ export async function checkHealth() {
   if (!res.ok) throw new ApiError('Health check failed', res.status);
   return res.json();
 }
+
+/**
+ * Retrieves all registered subjects with summary stats.
+ *
+ * @async
+ * @returns {Promise<Array<object>>}
+ */
+export async function fetchSubjects() {
+  return request('/subjects');
+}
+
+/**
+ * Retrieves detailed question distribution and deficit warnings for a subject.
+ *
+ * @async
+ * @param {string} subjectId
+ * @returns {Promise<object>}
+ */
+export async function fetchSubjectStats(subjectId) {
+  return request(`/subjects/${encodeURIComponent(subjectId)}/stats`);
+}
+
+/**
+ * Creates a new subject domain.
+ *
+ * @async
+ * @param {{ name: string, id?: string }} subjectData
+ * @returns {Promise<object>}
+ */
+export async function createSubject(subjectData) {
+  return request('/subjects', {
+    method: 'POST',
+    body: JSON.stringify(subjectData),
+  });
+}
+
+/**
+ * Creates a new recruitment post tied to a subject with required competencies.
+ *
+ * @async
+ * @param {{ title: string, subjectId: string, level?: string, skills: Array }} postData
+ * @returns {Promise<object>}
+ */
+export async function createPost(postData) {
+  return request('/posts', {
+    method: 'POST',
+    body: JSON.stringify(postData),
+  });
+}
+
+/**
+ * Validates or imports a subject bundle JSON payload.
+ *
+ * @async
+ * @param {object} bundle - Subject bundle object
+ * @param {boolean} [dryRun=false] - If true, validates without saving
+ * @returns {Promise<object>}
+ */
+export async function importSubjectBundle(bundle, dryRun = false) {
+  return request(`/admin/subjects/import?dryRun=${Boolean(dryRun)}`, {
+    method: 'POST',
+    body: JSON.stringify(bundle),
+  });
+}

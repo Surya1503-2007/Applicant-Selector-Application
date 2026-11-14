@@ -13,6 +13,7 @@ export default function Header() {
     { label: 'Dashboard', path: '/' },
     { label: 'New Interview Setup', path: '/setup' },
     { label: 'Rankings & Reports', path: '/reports' },
+    { label: 'Admin & Subjects', path: '/admin/subjects' },
   ];
 
   return (
