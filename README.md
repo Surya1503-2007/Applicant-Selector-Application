@@ -939,3 +939,78 @@ Automated verification test [`scripts/testCandidateProtection.js`](file:///Users
   ```bash
   npm run test:security
   ```
+
+---
+
+### 8. Part 7D: Multi-Subject Domain Support & Admin Curriculum Tooling
+
+Part 7D delivers complete multi-subject curriculum support with **purely data-driven ingestion** (zero per-subject code):
+
+#### How to Add a New Subject Using Only Data
+1. Prepare a JSON bundle defining the subject, topics, and question bank:
+   ```json
+   {
+     "subject": {
+       "id": "radar-sub-003",
+       "name": "Radar & Sensor Signal Processing"
+     },
+     "topics": [
+       { "id": "radar-top-cfar", "name": "CFAR Detection Algorithms" },
+       { "id": "radar-top-aesa", "name": "AESA Digital Beamforming" }
+     ],
+     "questions": [
+       {
+         "id": "radar-cfar-e1",
+         "topicId": "radar-top-cfar",
+         "difficulty": "EASY",
+         "levelTag": "TECHNICAL",
+         "questionText": "Explain Cell-Averaging CFAR (CA-CFAR) in pulse-Doppler radar.",
+         "simplifiedText": "In simpler terms: How does CA-CFAR average noise cells to prevent false alarms?",
+         "idealAnswer": "CA-CFAR averages reference cells around the cell under test to estimate noise power...",
+         "keywords": ["CA-CFAR", "noise power", "reference cells", "false alarm rate"],
+         "parentQId": null
+       }
+     ]
+   }
+   ```
+2. Navigate to **"Admin & Subjects"** (`/admin/subjects`) in the header.
+3. Click **"Import Subject Bundle (JSON)"**, paste the JSON payload, and click **"Dry-Run Preview"**.
+4. The engine validates:
+   - Topic ID and name uniqueness within the bundle.
+   - Question keyword and ideal answer completeness.
+   - Forward and parent question dependency resolution (`parentQId`).
+   - Question bank difficulty balance against `MIN_QUESTIONS_PER_DIFFICULTY` (1 Easy, 1 Medium, 1 Hard per active topic).
+5. Click **"Confirm & Ingest Subject"** to atomically register the curriculum.
+6. Create or link recruitment posts to the new subject domain via `POST /api/posts`. The adaptive interview engine, skill-match, question relevancy, and final reporting automatically operate on the new domain rows with **zero code modifications**.
+
+#### Roles & Permissions Matrix
+
+| Feature / Resource | Candidate | Examiner | Board Admin |
+| :--- | :---: | :---: | :---: |
+| Answer Questions (Interview Room) | ✔ | — | — |
+| View Live Scores & Telemetry | ❌ | ✔ | ✔ |
+| Inject Live Expert Question | ❌ | ✔ | ✔ |
+| Conclude Interview Early | ❌ | ✔ | ✔ |
+| View Final Report & Remarks | ❌ | ✔ | ✔ |
+| Override Recommendation | ❌ | ✔ | ✔ |
+| Access Admin Curriculum Governance | ❌ | ❌ | ✔ |
+| Import Subject Bundles (JSON) | ❌ | ❌ | ✔ |
+| Create New Subjects & Vacancies | ❌ | ❌ | ✔ |
+
+#### New Endpoints (Part 7D)
+- `GET /api/subjects`: Lists registered subjects with topic and question counts.
+- `GET /api/subjects/:id/stats`: Topic-level question counts across difficulties with deficit warnings.
+- `POST /api/subjects`: Creates a new subject domain.
+- `POST /api/posts`: Creates a new recruitment post associated with a subject.
+- `POST /api/admin/subjects/import?dryRun=true|false`: Validates, dry-runs, and imports JSON subject curriculum bundles.
+
+#### Multi-Subject Automated Verification Suite
+Run the full Part 7D automated test:
+```bash
+npm run test:multisubject
+```
+Verifies:
+- Subject bundle import dry-run without database mutations.
+- Strict rejection of duplicate topics, missing ideal answers/keywords, and circular parent dependencies.
+- Full end-to-end interview simulation on Subject 2 (*"Embedded Systems Design"*).
+- Domain isolation ensuring Subject 1 topics never contaminate Subject 2 reports.
