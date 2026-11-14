@@ -17,6 +17,8 @@ import {
   fetchInterviewQuestion,
   submitAnswer,
   terminateInterviewEarly,
+  injectExpertQuestion,
+  previewQuestionRelevancy,
 } from '../api/client';
 import VerdictBadge from '../components/VerdictBadge';
 import ScoreBadge from '../components/ScoreBadge';
@@ -64,6 +66,16 @@ export default function InterviewRoomPage() {
   const [terminationReason, setTerminationReason] = useState('');
   const [isTerminating, setIsTerminating] = useState(false);
 
+  // Expert question injection modal state (Part 7C)
+  const [showExpertModal, setShowExpertModal] = useState(false);
+  const [expertQuestionText, setExpertQuestionText] = useState('');
+  const [expertDifficulty, setExpertDifficulty] = useState('MEDIUM');
+  const [expertIdealAnswer, setExpertIdealAnswer] = useState('');
+  const [expertKeywords, setExpertKeywords] = useState('');
+  const [isInjectingExpert, setIsInjectingExpert] = useState(false);
+  const [expertPreview, setExpertPreview] = useState(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+
   // Leave interview confirmation dialog
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
 
@@ -79,7 +91,7 @@ export default function InterviewRoomPage() {
       const nextVal = !prev;
       try {
         localStorage.setItem('rac_examiner_mode', String(nextVal));
-      } catch (_) {}
+      } catch (_) { }
       return nextVal;
     });
   };
@@ -110,7 +122,7 @@ export default function InterviewRoomPage() {
       const data = await fetchInterviewQuestion(sessionId);
 
       // Check if session completed
-      if (data.interviewComplete) {
+      if (data.isComplete || data.interviewComplete) {
         navigate(`/interview/${sessionId}/done`, { replace: true });
         return;
       }
@@ -163,48 +175,49 @@ export default function InterviewRoomPage() {
     setTransitionMessage('Thank you. Next question...');
 
     try {
-      // 1. Submit answer for deterministic offline evaluation
+      // 1. Submit the answer. The server scores it, runs the adaptive engine and
+      //    returns the next question in the same response.
       const result = await submitAnswer({
         sessionId,
-        questionId: questionData.question.id,
         answerText: answerText.trim(),
       });
 
-      // Update examiner telemetry with the newly returned score details
-      if (result) {
+      // Update examiner telemetry from the server's scoring and engine decision
+      if (result?.scoring) {
+        const s = result.scoring;
         setLastAnswerDetails({
-          relevancy: result.relevancy,
-          correctness: result.correctness,
-          answerScore: result.answerScore,
-          verdict: result.verdict,
-          flags: result.breakdown?.flags || [],
-          matchedKeywords: result.breakdown?.matchedKeywords || [],
-          missingKeywords: result.breakdown?.missingKeywords || [],
+          relevancy: s.relevancy,
+          correctness: s.correctness,
+          answerScore: s.answerScore,
+          verdict: s.verdict,
+          flags: s.breakdown?.flags || [],
+          matchedKeywords: s.breakdown?.matchedKeywords || [],
+          missingKeywords: s.breakdown?.missingKeywords || [],
           engineDecision: {
-            action: result.verdict === 'STRONG' ? 'ADVANCE_DIFFICULTY' : 'EVALUATE_PERFORMANCE',
-            reason: `Evaluated ${result.verdict} verdict with score ${Math.round((result.answerScore || 0) * 100)}%.`,
+            action: result.decision?.action || 'N/A',
+            reason: result.decision?.reason || '',
             currentTopic: questionData.question?.topicName || 'Technical',
             currentDifficulty: questionData.question?.difficulty || 'EASY',
           },
         });
       }
 
-      // 2. Fetch the next pending question
-      const nextData = await fetchInterviewQuestion(sessionId);
-
-      // Check if interview concluded
-      if (nextData.interviewComplete) {
+      // 2. Interview finished: go to the completion screen
+      if (result?.interviewComplete) {
         setTimeout(() => {
           navigate(`/interview/${sessionId}/done`, { replace: true });
         }, 600);
         return;
       }
 
-      // Update UI with next question
-      setQuestionData(nextData);
-      setAnswerText('');
-      if (nextData.difficultyProgression) {
-        setDifficultyProgression(nextData.difficultyProgression);
+      // 3. Show the next question straight from the response (no second fetch)
+      if (result?.nextQuestion) {
+        setQuestionData((prev) => ({
+          ...prev,
+          // nextQuestion is the sanitized question object; adjust if it is wrapped
+          question: result.nextQuestion.question ?? result.nextQuestion,
+        }));
+        setAnswerText('');
       }
     } catch (err) {
       setSubmitError(err.message || 'Failed to submit response. Please retry.');
@@ -290,11 +303,10 @@ export default function InterviewRoomPage() {
             <div className="flex flex-wrap items-center gap-3">
               {/* Phase Badge */}
               <span
-                className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${
-                  isIcebreaker
-                    ? 'bg-blue-900/60 text-blue-200 border border-blue-400/40'
-                    : 'bg-emerald-900/60 text-emerald-200 border border-emerald-400/40'
-                }`}
+                className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${isIcebreaker
+                  ? 'bg-blue-900/60 text-blue-200 border border-blue-400/40'
+                  : 'bg-emerald-900/60 text-emerald-200 border border-emerald-400/40'
+                  }`}
               >
                 {questionData?.phase || 'Technical'} Phase
               </span>
@@ -320,11 +332,10 @@ export default function InterviewRoomPage() {
               <button
                 type="button"
                 onClick={toggleExaminerMode}
-                className={`flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
-                  isExaminerMode
-                    ? 'bg-gov-gold text-gov-navy border-gov-gold shadow-sm font-extrabold ring-2 ring-gov-gold/30'
-                    : 'bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700'
-                }`}
+                className={`flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold transition-all border ${isExaminerMode
+                  ? 'bg-gov-gold text-gov-navy border-gov-gold shadow-sm font-extrabold ring-2 ring-gov-gold/30'
+                  : 'bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700'
+                  }`}
                 title="Toggle Examiner Telemetry Side Panel"
               >
                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -627,6 +638,19 @@ export default function InterviewRoomPage() {
                     Scoring telemetry will appear immediately upon the first submitted candidate response.
                   </div>
                 )}
+                {/* Part 7C: Live Expert Question Injection Trigger */}
+                <div className="pt-2 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowExpertModal(true)}
+                    className="w-full py-2 px-3 bg-gov-navy text-white text-xs font-bold rounded-lg hover:bg-gov-navy/90 transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Inject Expert Question Next
+                  </button>
+                </div>
               </aside>
             )}
           </div>
@@ -692,6 +716,181 @@ export default function InterviewRoomPage() {
                 className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 disabled:opacity-50"
               >
                 {isTerminating ? 'Terminating...' : 'Confirm Early Termination'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Part 7C: Live Expert Question Injection Modal */}
+      {showExpertModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div className="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-gov-navy"></span>
+                Inject Expert-Authored Question
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExpertModal(false);
+                  setExpertPreview(null);
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Question Prompt Text <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={expertQuestionText}
+                  onChange={(e) => setExpertQuestionText(e.target.value)}
+                  placeholder="e.g. In high-criticality flight avionics, how do you handle asymmetric Byzantine faults in triple-redundant flight control computers?"
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-gov-navy outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Difficulty Tier
+                  </label>
+                  <select
+                    value={expertDifficulty}
+                    onChange={(e) => setExpertDifficulty(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white text-slate-900 focus:ring-2 focus:ring-gov-navy outline-none"
+                  >
+                    <option value="EASY">EASY</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HARD">HARD</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">
+                    Relevancy Preview
+                  </label>
+                  <button
+                    type="button"
+                    disabled={isPreviewing || !expertKeywords.trim()}
+                    onClick={async () => {
+                      setIsPreviewing(true);
+                      try {
+                        const kws = expertKeywords.split(',').map((k) => k.trim()).filter(Boolean);
+                        const prev = await previewQuestionRelevancy({
+                          questionText: expertQuestionText,
+                          keywords: kws,
+                          candidateId: questionData?.candidate?.id,
+                        });
+                        setExpertPreview(prev);
+                      } catch (err) {
+                        setToast({ type: 'error', message: 'Failed to preview relevancy: ' + err.message });
+                      } finally {
+                        setIsPreviewing(false);
+                      }
+                    }}
+                    className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors flex items-center justify-center gap-1"
+                  >
+                    {isPreviewing ? 'Computing...' : 'Check Relevancy'}
+                  </button>
+                </div>
+              </div>
+
+              {expertPreview && (
+                <div className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${
+                  expertPreview.isLowFit ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                }`}>
+                  <div>
+                    <span className="font-bold">Relevancy Score: </span>
+                    <span className="font-mono font-extrabold">{expertPreview.score}%</span> ({expertPreview.band})
+                    {expertPreview.isLowFit && <span className="ml-2 text-rose-700 font-bold">[LOW FIT WARNING]</span>}
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Candidate Fit: {Math.round(expertPreview.candidateFit * 100)}%
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Ideal Grading Reference Answer <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={expertIdealAnswer}
+                  onChange={(e) => setExpertIdealAnswer(e.target.value)}
+                  placeholder="Expected comprehensive technical points and engineering concepts..."
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-gov-navy outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Required Grading Keywords (comma-separated) <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={expertKeywords}
+                  onChange={(e) => setExpertKeywords(e.target.value)}
+                  placeholder="e.g. Byzantine fault, voting algorithm, triple modular redundancy, DO-254"
+                  className="w-full p-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-gov-navy outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExpertModal(false);
+                  setExpertPreview(null);
+                }}
+                className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isInjectingExpert || !expertQuestionText.trim() || !expertIdealAnswer.trim() || !expertKeywords.trim()}
+                onClick={async () => {
+                  setIsInjectingExpert(true);
+                  try {
+                    const kws = expertKeywords.split(',').map((k) => k.trim()).filter(Boolean);
+                    await injectExpertQuestion(sessionId, {
+                      questionText: expertQuestionText.trim(),
+                      difficulty: expertDifficulty,
+                      idealAnswer: expertIdealAnswer.trim(),
+                      keywords: kws,
+                    });
+                    setToast({
+                      type: 'success',
+                      message: 'Expert question successfully queued! It will be delivered as the next prompt.',
+                    });
+                    setShowExpertModal(false);
+                    setExpertQuestionText('');
+                    setExpertIdealAnswer('');
+                    setExpertKeywords('');
+                    setExpertPreview(null);
+                  } catch (err) {
+                    setToast({ type: 'error', message: err.message || 'Failed to inject expert question.' });
+                  } finally {
+                    setIsInjectingExpert(false);
+                  }
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-gov-navy hover:bg-gov-navy/90 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+              >
+                {isInjectingExpert ? 'Injecting...' : 'Confirm Injection'}
               </button>
             </div>
           </div>

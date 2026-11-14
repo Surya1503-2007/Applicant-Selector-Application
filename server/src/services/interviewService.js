@@ -379,45 +379,62 @@ async function submitAnswer(sessionId, answerText) {
   let nextQuestionEntity = null;
   let isNextReask = false;
 
-  if (decision.action === ACTIONS.REASK_SIMPLIFIED) {
-    // Same question in simplified form
-    nextQuestionEntity = question;
-    isNextReask = true;
-  } else if (decision.action === ACTIONS.ICEBREAKER) {
-    const unaskedIcebreakers = await questionService.getIcebreakerQuestions(askedIds);
-    nextQuestionEntity = unaskedIcebreakers.length > 0 ? unaskedIcebreakers[0] : null;
-  } else if (decision.action === ACTIONS.END) {
-    nextQuestionEntity = null;
-  } else {
-    // Technical question selection
-    const targetTopicId = decision.nextTopicId;
-    const targetDifficulty = decision.nextDifficulty || DIFFICULTIES.EASY;
+  // Part 7C: Check if an expert question is queued
+  let updatedExpertQueue = Array.isArray(currentState.expertQueue)
+    ? [...currentState.expertQueue]
+    : [];
 
-    // Check if advancing to MEDIUM and a linked follow-up question exists
-    if (decision.action === ACTIONS.NEXT_HARDER && targetDifficulty === DIFFICULTIES.MEDIUM) {
-      const followUps = await questionService.getFollowupQuestions(activeQuestionId);
-      const unaskedFollowUp = followUps.find((f) => !askedIds.includes(f.id));
-      if (unaskedFollowUp) {
-        nextQuestionEntity = unaskedFollowUp;
-      }
+  if (updatedExpertQueue.length > 0 && decision.action !== ACTIONS.REASK_SIMPLIFIED && decision.action !== ACTIONS.END) {
+    const nextExpertQId = updatedExpertQueue.shift();
+    const expertQ = await questionService.getQuestionById(nextExpertQId);
+    if (expertQ && !askedIds.includes(expertQ.id)) {
+      nextQuestionEntity = expertQ;
+      decision.action = 'EXPERT_INJECTED';
+      decision.reason = `Serving examiner-injected expert question "${expertQ.id}". Adaptive ladder state preserved.`;
     }
+  }
 
-    // Default question pick from topic and difficulty
-    if (!nextQuestionEntity && targetTopicId) {
-      nextQuestionEntity = await questionService.getNextQuestion(
-        targetTopicId,
-        targetDifficulty,
-        askedIds
-      );
+  if (!nextQuestionEntity) {
+    if (decision.action === ACTIONS.REASK_SIMPLIFIED) {
+      // Same question in simplified form
+      nextQuestionEntity = question;
+      isNextReask = true;
+    } else if (decision.action === ACTIONS.ICEBREAKER) {
+      const unaskedIcebreakers = await questionService.getIcebreakerQuestions(askedIds);
+      nextQuestionEntity = unaskedIcebreakers.length > 0 ? unaskedIcebreakers[0] : null;
+    } else if (decision.action === ACTIONS.END) {
+      nextQuestionEntity = null;
+    } else {
+      // Technical question selection
+      const targetTopicId = decision.nextTopicId;
+      const targetDifficulty = decision.nextDifficulty || DIFFICULTIES.EASY;
 
-      // Graceful fallback: If target difficulty not available, pick any unasked from topic
-      if (!nextQuestionEntity) {
-        const fallbackDifficulties = [DIFFICULTIES.EASY, DIFFICULTIES.MEDIUM, DIFFICULTIES.HARD];
-        for (const diff of fallbackDifficulties) {
-          nextQuestionEntity = await questionService.getNextQuestion(targetTopicId, diff, askedIds);
-          if (nextQuestionEntity) {
-            decision.reason += ` (Fallback: Selected ${diff} question due to pool availability).`;
-            break;
+      // Check if advancing to MEDIUM and a linked follow-up question exists
+      if (decision.action === ACTIONS.NEXT_HARDER && targetDifficulty === DIFFICULTIES.MEDIUM) {
+        const followUps = await questionService.getFollowupQuestions(activeQuestionId);
+        const unaskedFollowUp = followUps.find((f) => !askedIds.includes(f.id));
+        if (unaskedFollowUp) {
+          nextQuestionEntity = unaskedFollowUp;
+        }
+      }
+
+      // Default question pick from topic and difficulty
+      if (!nextQuestionEntity && targetTopicId) {
+        nextQuestionEntity = await questionService.getNextQuestion(
+          targetTopicId,
+          targetDifficulty,
+          askedIds
+        );
+
+        // Graceful fallback: If target difficulty not available, pick any unasked from topic
+        if (!nextQuestionEntity) {
+          const fallbackDifficulties = [DIFFICULTIES.EASY, DIFFICULTIES.MEDIUM, DIFFICULTIES.HARD];
+          for (const diff of fallbackDifficulties) {
+            nextQuestionEntity = await questionService.getNextQuestion(targetTopicId, diff, askedIds);
+            if (nextQuestionEntity) {
+              decision.reason += ` (Fallback: Selected ${diff} question due to pool availability).`;
+              break;
+            }
           }
         }
       }
@@ -467,8 +484,11 @@ async function submitAnswer(sessionId, answerText) {
       }
     }
 
+    // Check if the answered question was an injected expert question
+    const isExpertInjected = question.source === 'EXPERT';
+
     const updatedTechnicalCount =
-      question.levelTag !== 'ICEBREAKER'
+      question.levelTag !== 'ICEBREAKER' && !isExpertInjected
         ? currentState.technicalCount + 1
         : currentState.technicalCount;
 
@@ -477,8 +497,13 @@ async function submitAnswer(sessionId, answerText) {
         ? currentState.icebreakerCount + 1
         : currentState.icebreakerCount;
 
-    const updatedConsecutiveIrrelevant =
-      verdict === 'IRRELEVANT' ? currentState.consecutiveIrrelevant + 1 : 0;
+    // Icebreakers and Expert-injected questions never affect the struggling counter
+    const isSpecialQuestion = question.levelTag === 'ICEBREAKER' || isExpertInjected;
+    const updatedConsecutiveIrrelevant = isSpecialQuestion
+      ? currentState.consecutiveIrrelevant
+      : verdict === 'IRRELEVANT'
+        ? currentState.consecutiveIrrelevant + 1
+        : 0;
 
     const nextPhase = isInterviewEnding
       ? PHASES.COMPLETED
@@ -495,6 +520,7 @@ async function submitAnswer(sessionId, answerText) {
         icebreakerCount: updatedIcebreakerCount,
         consecutiveIrrelevant: updatedConsecutiveIrrelevant,
         topicProgress: updatedTopicProgress,
+        expertQueue: updatedExpertQueue,
         status: isInterviewEnding ? 'COMPLETED' : 'ACTIVE',
         endReason: isInterviewEnding && decision.end ? decision.end.reason : null,
       },
@@ -686,12 +712,176 @@ async function endInterviewEarly(sessionId, reason = END_REASONS.BOARD_TERMINATE
   });
 }
 
+/**
+ * Injects an expert-authored question into an ongoing interview session.
+ * Creates the question with source='EXPERT' and appends it to sessionState.expertQueue.
+ *
+ * @async
+ * @param {string} sessionId - Interview session ID.
+ * @param {object} questionData - Question payload.
+ * @param {string} questionData.questionText - Prompt text.
+ * @param {string} [questionData.topicId] - Topic ID.
+ * @param {('EASY'|'MEDIUM'|'HARD')} [questionData.difficulty='MEDIUM'] - Difficulty.
+ * @param {string} questionData.idealAnswer - Reference grading text.
+ * @param {string[]} questionData.keywords - Required grading keywords.
+ * @param {string} [questionData.createdById] - Examiner User ID.
+ * @returns {Promise<{
+ *   success: boolean,
+ *   question: object,
+ *   expertQueueLength: number,
+ *   relevancyPreview?: object
+ * }>}
+ */
+async function injectExpertQuestion(sessionId, questionData) {
+  if (!sessionId) {
+    const err = new Error('sessionId is required.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const sessionState = await prisma.sessionState.findUnique({
+    where: { sessionId },
+    include: {
+      session: {
+        include: {
+          candidate: { include: { skills: true } },
+          reports: { orderBy: { createdAt: 'desc' }, take: 1 },
+        },
+      },
+    },
+  });
+
+  if (!sessionState) {
+    const err = new Error(`Session "${sessionId}" not found.`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (sessionState.status === 'COMPLETED') {
+    const err = new Error(`Session "${sessionId}" is already completed; cannot inject questions.`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const {
+    questionText,
+    topicId,
+    difficulty = 'MEDIUM',
+    idealAnswer,
+    keywords = [],
+    createdById,
+  } = questionData || {};
+
+  if (!questionText || typeof questionText !== 'string' || !questionText.trim()) {
+    const err = new Error('questionText is required and must be a string.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!idealAnswer || typeof idealAnswer !== 'string' || !idealAnswer.trim()) {
+    const err = new Error('idealAnswer is required for expert-injected questions.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!Array.isArray(keywords) || keywords.length === 0) {
+    const err = new Error('keywords array with at least one keyword is required.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 1. Create Question record with source='EXPERT'
+  const newQuestion = await prisma.question.create({
+    data: {
+      topicId: topicId || null,
+      difficulty,
+      questionText: questionText.trim(),
+      idealAnswer: idealAnswer.trim(),
+      keywords: keywords.map((k) => String(k).trim()).filter(Boolean),
+      levelTag: 'TECHNICAL',
+      source: 'EXPERT',
+      createdById: createdById || null,
+      status: 'ACTIVE',
+    },
+  });
+
+  // 2. Queue expert question so it is asked next:
+  // "creates an EXPERT question and queues it next."
+  // If the active question is pending and hasn't been answered, we replace currentQuestionId with this expert question,
+  // pushing any previous pending question into the queue so the immediate next ask is this expert question.
+  const previousPendingId = sessionState.currentQuestionId;
+
+  const currentQueue = Array.isArray(sessionState.expertQueue)
+    ? [...sessionState.expertQueue]
+    : [];
+
+  // If there was an unasked pending question and it's not the new expert question, keep it queued after
+  if (previousPendingId && previousPendingId !== newQuestion.id) {
+    currentQueue.push(previousPendingId);
+  }
+
+  // Update sessionState so the expert question is immediately current
+  await prisma.sessionState.update({
+    where: { sessionId },
+    data: {
+      currentQuestionId: newQuestion.id,
+      currentDifficulty: newQuestion.difficulty,
+      currentTopicId: newQuestion.topicId || null,
+      expertQueue: currentQueue,
+    },
+  });
+
+  // 3. Compute relevancy preview & record ExpertQuestionScore telemetry if candidate/post known
+  let relevancyScore = 0.5;
+  let isLowFit = false;
+
+  try {
+    const { scoreQuestionRelevancy } = require('../reports/questionRelevancy');
+    const candidateSkills = (sessionState.session?.candidate?.skills || []).map((s) => s.skillName);
+    const postSkills = []; // optionally load post skills if post is available
+
+    const relResult = scoreQuestionRelevancy({
+      question: {
+        questionText: newQuestion.questionText,
+        keywords: newQuestion.keywords,
+      },
+      candidateSkills,
+      postSkills,
+    });
+    relevancyScore = relResult.questionRelevancy;
+    isLowFit = relResult.isLowFit;
+
+    // Persist ExpertQuestionScore record
+    await prisma.expertQuestionScore.create({
+      data: {
+        userId: createdById || 'examiner-anonymous',
+        sessionId,
+        questionId: newQuestion.id,
+        avgRelevancy: Math.round(relevancyScore * 100 * 100) / 100,
+        countAsked: 1,
+        countLowFit: isLowFit ? 1 : 0,
+      },
+    });
+  } catch (err) {
+    console.warn('[Part 7C] Could not compute expert question telemetry:', err.message);
+  }
+
+  return {
+    success: true,
+    question: newQuestion,
+    expertQueueLength: currentQueue.length,
+    relevancyScore: Math.round(relevancyScore * 100 * 100) / 100,
+    isLowFit,
+  };
+}
+
 module.exports = {
   startInterview,
   getCurrentQuestion,
   submitAnswer,
   getInterviewState,
   endInterviewEarly,
+  injectExpertQuestion,
   sanitizeQuestionForCandidate,
   getPoolAvailability,
 };

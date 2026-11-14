@@ -437,6 +437,7 @@ function collectFlags(responses = [], skillMatch = null, sessionState = null, op
     NO_ANSWER: 0,
     REASKED: 0,
     LOW_FIT_QUESTION: options.lowFitQuestionsCount || 0,
+    EXPERT_INJECTED: 0,
   };
 
   for (const resp of responses) {
@@ -457,6 +458,9 @@ function collectFlags(responses = [], skillMatch = null, sessionState = null, op
     }
     if (breakdownFlags.includes('NO_ANSWER')) {
       counts.NO_ANSWER++;
+    }
+    if (breakdownFlags.includes('EXPERT_INJECTED') || (resp.question && resp.question.source === 'EXPERT')) {
+      counts.EXPERT_INJECTED++;
     }
   }
 
@@ -480,6 +484,7 @@ function collectFlags(responses = [], skillMatch = null, sessionState = null, op
   if (counts.NO_ANSWER > 0) activeFlags.push('NO_ANSWER');
   if (counts.REASKED > 0) activeFlags.push('REASKED');
   if (counts.LOW_FIT_QUESTION > 0) activeFlags.push('LOW_FIT_QUESTION');
+  if (counts.EXPERT_INJECTED > 0) activeFlags.push('EXPERT_INJECTED');
   if (mandatoryGap) activeFlags.push('MANDATORY_GAP');
   if (terminatedEarly) activeFlags.push('TERMINATED_EARLY');
 

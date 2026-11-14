@@ -24,7 +24,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Internal helper for making fetch requests with timeout and JSON processing.
+ * Internal helper for making fetch requests with JSON processing.
  *
  * @private
  * @param {string} endpoint - Relative path (e.g. '/posts').
@@ -248,7 +248,9 @@ export async function fetchSessions() {
 }
 
 /**
- * Creates a new interview session for a candidate.
+ * Creates a bare interview session for a candidate.
+ * DEPRECATED: this does not initialise the adaptive engine. Use startInterview() instead.
+ * Remove once SetupWizardPage no longer imports it.
  *
  * @async
  * @param {string} candidateId - Candidate ID.
@@ -279,29 +281,29 @@ export async function fetchSessionById(sessionId) {
 }
 
 // =========================================================================
-// Answers API (Part 3)
+// Adaptive Interview Room API (Part 4 & 6)
 // =========================================================================
 
 /**
- * Evaluates and records a candidate's answer for a question within a session.
+ * Starts an adaptive interview: creates the session, runs the skill match,
+ * initialises SessionState and returns the first question.
  *
  * @async
  * @param {object} params
- * @param {string} params.sessionId - Interview session ID.
- * @param {string} params.questionId - Question ID.
- * @param {string} params.answerText - Candidate free-text transcript.
- * @returns {Promise<object>} Scored response result.
+ * @param {string} params.candidateId - Candidate ID.
+ * @param {string} params.postId - Post ID.
+ * @returns {Promise<{ sessionId: string, candidateId: string, postId: string,
+ *   skillMatchSummary: object, firstQuestion: object }>}
  */
-export async function submitAnswer({ sessionId, questionId, answerText }) {
-  return request('/answers', {
+export async function startInterview({ candidateId, postId }) {
+  if (!candidateId || !postId) {
+    throw new ApiError('Both candidateId and postId are required to start an interview.', 400);
+  }
+  return request('/interviews/start', {
     method: 'POST',
-    body: JSON.stringify({ sessionId, questionId, answerText }),
+    body: JSON.stringify({ candidateId, postId }),
   });
 }
-
-// =========================================================================
-// Adaptive Interview Room API (Part 4 & 6)
-// =========================================================================
 
 /**
  * Retrieves the current pending question for an active interview session.
@@ -309,13 +311,47 @@ export async function submitAnswer({ sessionId, questionId, answerText }) {
  *
  * @async
  * @param {string} sessionId - Interview session ID.
- * @returns {Promise<object>} Question payload or completion signal.
+ * @returns {Promise<object>} { sessionId, phase, isComplete, endReason, question }
  */
 export async function fetchInterviewQuestion(sessionId) {
   if (!sessionId) {
     throw new ApiError('Session ID is required to fetch interview question.', 400);
   }
   return request(`/interviews/${encodeURIComponent(sessionId)}/question`);
+}
+
+/**
+ * Submits an answer to the pending question. The server scores it, runs the adaptive
+ * engine and returns { scoring, decision, nextQuestion, interviewComplete, endReason }.
+ *
+ * @async
+ * @param {object} params
+ * @param {string} params.sessionId - Interview session ID.
+ * @param {string} params.answerText - Candidate free-text answer.
+ * @returns {Promise<object>}
+ */
+export async function submitAnswer({ sessionId, answerText }) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required to submit an answer.', 400);
+  }
+  return request(`/interviews/${encodeURIComponent(sessionId)}/answer`, {
+    method: 'POST',
+    body: JSON.stringify({ answerText }),
+  });
+}
+
+/**
+ * Retrieves the interview state snapshot and DecisionLog audit trail.
+ *
+ * @async
+ * @param {string} sessionId - Interview session ID.
+ * @returns {Promise<object>} State and decision log.
+ */
+export async function fetchInterviewState(sessionId) {
+  if (!sessionId) {
+    throw new ApiError('Session ID is required.', 400);
+  }
+  return request(`/interviews/${encodeURIComponent(sessionId)}/state`);
 }
 
 /**
@@ -330,7 +366,7 @@ export async function terminateInterviewEarly(sessionId, reason) {
   if (!sessionId) {
     throw new ApiError('Session ID is required.', 400);
   }
-  return request(`/interviews/${encodeURIComponent(sessionId)}/terminate`, {
+  return request(`/interviews/${encodeURIComponent(sessionId)}/end`, {
     method: 'POST',
     body: JSON.stringify({ reason }),
   });
@@ -419,6 +455,93 @@ export async function fetchRankings() {
   return request('/reports');
 }
 
+// =========================================================================
+// Question Bank & Expert Injections API (Part 7C)
+// =========================================================================
+
+/**
+ * Retrieves questions from the question bank.
+ *
+ * @async
+ * @param {object} [filters={}]
+ * @returns {Promise<Array<object>>}
+ */
+export async function fetchQuestions(filters = {}) {
+  const query = new URLSearchParams(filters).toString();
+  return request(`/questions${query ? `?${query}` : ''}`);
+}
+
+/**
+ * Creates a question in the bank.
+ *
+ * @async
+ * @param {object} questionData
+ * @returns {Promise<object>}
+ */
+export async function createQuestion(questionData) {
+  return request('/questions', {
+    method: 'POST',
+    body: JSON.stringify(questionData),
+  });
+}
+
+/**
+ * Updates a question in the bank.
+ *
+ * @async
+ * @param {string} id
+ * @param {object} questionData
+ * @returns {Promise<object>}
+ */
+export async function updateQuestion(id, questionData) {
+  return request(`/questions/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(questionData),
+  });
+}
+
+/**
+ * Archives a question.
+ *
+ * @async
+ * @param {string} id
+ * @returns {Promise<object>}
+ */
+export async function archiveQuestion(id) {
+  return request(`/questions/${encodeURIComponent(id)}/archive`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Previews relevancy of a proposed question.
+ *
+ * @async
+ * @param {object} previewData
+ * @returns {Promise<{ score: number, band: string, isLowFit: boolean, candidateFit: number, postFit: number }>}
+ */
+export async function previewQuestionRelevancy(previewData) {
+  return request('/questions/relevancy-preview', {
+    method: 'POST',
+    body: JSON.stringify(previewData),
+  });
+}
+
+/**
+ * Injects an expert-authored question into an active interview.
+ *
+ * @async
+ * @param {string} sessionId
+ * @param {object} questionData
+ * @returns {Promise<object>}
+ */
+export async function injectExpertQuestion(sessionId, questionData) {
+  return request(`/interviews/${encodeURIComponent(sessionId)}/expert-question`, {
+    method: 'POST',
+    body: JSON.stringify(questionData),
+  });
+}
+
 /**
  * Server health check probe.
  *
@@ -431,4 +554,3 @@ export async function checkHealth() {
   if (!res.ok) throw new ApiError('Health check failed', res.status);
   return res.json();
 }
-

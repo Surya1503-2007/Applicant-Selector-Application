@@ -8,6 +8,9 @@ AI-based adaptive interview and candidate screening platform designed for the **
 - **Part 4**: Adaptive Interview Engine (Backend Core)
 - **Part 5**: Candidate Assessment Report & Final Scoring (Backend Core)
 - **Part 6**: Frontend Development (Examiner Dashboard, Setup Wizard & Boardroom UI)
+- **Part 7C**: Expert-Typed Questions with Relevancy Scoring & Ice-Breaker Scoring
+
+> **DOMAIN EXPERT NOTICE**: All newly authored or injected questions (including managerial questions and examiner expert-injected questions) must undergo domain expert review by senior RAC scientists prior to official deployment.
 
 ---
 

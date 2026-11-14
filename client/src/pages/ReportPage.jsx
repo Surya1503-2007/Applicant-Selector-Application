@@ -537,7 +537,14 @@ export default function ReportPage() {
                           Q{q.questionNumber}
                         </td>
                         <td className="py-3 px-3 text-slate-900 font-semibold max-w-md">
-                          <div className="line-clamp-2">{q.questionText}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="line-clamp-2">{q.questionText}</span>
+                            {q.flags && q.flags.includes('EXPERT_INJECTED') && (
+                              <span className="shrink-0 px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-mono text-[9px] font-extrabold border border-purple-300">
+                                EXPERT INJECTED
+                              </span>
+                            )}
+                          </div>
                           <div className="text-[10px] text-slate-500 font-normal mt-0.5">
                             Topic: {q.topicName}
                           </div>

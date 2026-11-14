@@ -40,6 +40,8 @@ This document provides the standard operating test manual and verification check
 | **30** | **Print / Save as PDF** | Click "Print / Save as PDF" button | Browser print dialog opens with `@media print` layout: navigation and action buttons hidden, backgrounds white, card breaks avoided, board sign-off section visible. | [x] PASS |
 | **31** | **Open Rankings** | Click "Rankings & Reports" in the top navigation or navigate to `/reports` | Comprehensive recruitment rankings table loads displaying all assessed candidates, posts, overall scores, recommendations, and dates. | [x] PASS |
 | **32** | **Filter and Sort Rankings** | Select a specific post in the post filter; change recommendation filter; click "Score Order" button to toggle ASC/DESC | Table updates immediately in real-time; clicking any row navigates directly to that candidate's dossier (`/report/:sessionId`). | [x] PASS |
+| **33** | **Live Expert Question Injection (Part 7C)** | In Examiner Mode during an active interview, click "Inject Expert Question Next", input prompt, ideal answer, and keywords. Click "Check Relevancy", then "Confirm Injection" | Relevancy preview calculates; question queues as the immediate next question; response is scored, flagged `EXPERT_INJECTED` in report, and excluded from technical ladder count limits. | [x] PASS |
+| **34** | **Ice-breaker Fluency & Aspect Coverage (Part 7C)** | Submit an initial warm-up response | Scored for aspect coverage and fluency without mutating the technical adaptive ladder or contaminating the overall interview score. | [x] PASS |
 
 ---
 

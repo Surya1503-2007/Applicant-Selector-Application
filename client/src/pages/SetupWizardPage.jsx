@@ -13,7 +13,7 @@ import {
   createCandidate,
   saveCandidateSkills,
   computeSkillMatch,
-  createSession,
+  startInterview,
 } from '../api/client';
 import Gauge from '../components/Gauge';
 import BandBadge from '../components/BandBadge';
@@ -205,10 +205,14 @@ export default function SetupWizardPage() {
     // Create session
     setIsLaunchingSession(true);
     try {
-      const session = await createSession(createdCandidate.id);
+      const started = await startInterview({
+        candidateId: createdCandidate.id,
+        postId: selectedPostId,
+      });
+      const sessionId = started.sessionId;
       setToast({
         type: 'success',
-        message: `Interview Session initiated successfully (ID: ${session.id})`,
+        message: `Interview Session initiated successfully (ID: ${sessionId})`,
       });
       // Navigate to interview room
       setTimeout(() => {
@@ -304,13 +308,12 @@ export default function SetupWizardPage() {
                 aria-current={currentStep === 1 ? 'step' : undefined}
               >
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-                    currentStep === 1
-                      ? 'bg-gov-navy text-white shadow-sm ring-4 ring-gov-navy/15'
-                      : currentStep > 1
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${currentStep === 1
+                    ? 'bg-gov-navy text-white shadow-sm ring-4 ring-gov-navy/15'
+                    : currentStep > 1
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-200 text-slate-600'
-                  }`}
+                    }`}
                 >
                   {currentStep > 1 ? (
                     <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -329,9 +332,8 @@ export default function SetupWizardPage() {
                     Phase 1
                   </div>
                   <div
-                    className={`text-sm font-bold ${
-                      currentStep === 1 ? 'text-gov-navy' : 'text-slate-800'
-                    }`}
+                    className={`text-sm font-bold ${currentStep === 1 ? 'text-gov-navy' : 'text-slate-800'
+                      }`}
                   >
                     Select Post
                   </div>
@@ -353,13 +355,12 @@ export default function SetupWizardPage() {
                 aria-current={currentStep === 2 ? 'step' : undefined}
               >
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-                    currentStep === 2
-                      ? 'bg-gov-navy text-white shadow-sm ring-4 ring-gov-navy/15'
-                      : currentStep > 2
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${currentStep === 2
+                    ? 'bg-gov-navy text-white shadow-sm ring-4 ring-gov-navy/15'
+                    : currentStep > 2
                       ? 'bg-emerald-600 text-white'
                       : 'bg-slate-200 text-slate-600'
-                  }`}
+                    }`}
                 >
                   {currentStep > 2 ? (
                     <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -378,9 +379,8 @@ export default function SetupWizardPage() {
                     Phase 2
                   </div>
                   <div
-                    className={`text-sm font-bold ${
-                      currentStep === 2 ? 'text-gov-navy' : 'text-slate-800'
-                    }`}
+                    className={`text-sm font-bold ${currentStep === 2 ? 'text-gov-navy' : 'text-slate-800'
+                      }`}
                   >
                     Candidate Details
                   </div>
@@ -399,11 +399,10 @@ export default function SetupWizardPage() {
                 aria-current={currentStep === 3 ? 'step' : undefined}
               >
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${
-                    currentStep === 3
-                      ? 'bg-gov-navy text-white shadow-sm ring-4 ring-gov-navy/15'
-                      : 'bg-slate-200 text-slate-600'
-                  }`}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${currentStep === 3
+                    ? 'bg-gov-navy text-white shadow-sm ring-4 ring-gov-navy/15'
+                    : 'bg-slate-200 text-slate-600'
+                    }`}
                 >
                   3
                 </div>
@@ -412,9 +411,8 @@ export default function SetupWizardPage() {
                     Phase 3
                   </div>
                   <div
-                    className={`text-sm font-bold ${
-                      currentStep === 3 ? 'text-gov-navy' : 'text-slate-800'
-                    }`}
+                    className={`text-sm font-bold ${currentStep === 3 ? 'text-gov-navy' : 'text-slate-800'
+                      }`}
                   >
                     Skill Match & Suitability
                   </div>
@@ -482,11 +480,10 @@ export default function SetupWizardPage() {
                       role="radio"
                       aria-checked={isSelected}
                       tabIndex={0}
-                      className={`relative rounded-xl border p-5 cursor-pointer transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gov-navy ${
-                        isSelected
-                          ? 'border-gov-navy bg-slate-50/70 shadow-md ring-1 ring-gov-navy'
-                          : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
-                      }`}
+                      className={`relative rounded-xl border p-5 cursor-pointer transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-gov-navy ${isSelected
+                        ? 'border-gov-navy bg-slate-50/70 shadow-md ring-1 ring-gov-navy'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                        }`}
                     >
                       {/* Selection Checkmark */}
                       <div className="flex items-start justify-between gap-3">
@@ -507,11 +504,10 @@ export default function SetupWizardPage() {
                         </div>
 
                         <div
-                          className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                            isSelected
-                              ? 'border-gov-navy bg-gov-navy text-white'
-                              : 'border-slate-300 bg-white'
-                          }`}
+                          className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${isSelected
+                            ? 'border-gov-navy bg-gov-navy text-white'
+                            : 'border-slate-300 bg-white'
+                            }`}
                         >
                           {isSelected && (
                             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -546,11 +542,10 @@ export default function SetupWizardPage() {
                             return (
                               <span
                                 key={ps.id || ps.skillId}
-                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${
-                                  ps.isMandatory
-                                    ? 'bg-rose-50 text-rose-800 border-rose-200 font-semibold'
-                                    : 'bg-slate-100 text-slate-700 border-slate-200'
-                                }`}
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${ps.isMandatory
+                                  ? 'bg-rose-50 text-rose-800 border-rose-200 font-semibold'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}
                                 title={`Weight: ${ps.weight || 1}${ps.isMandatory ? ' (Mandatory)' : ' (Desirable)'}`}
                               >
                                 {skillName}
@@ -653,11 +648,10 @@ export default function SetupWizardPage() {
                     }
                   }}
                   placeholder="e.g. Dr. Rajesh Sharma or Priya Nair"
-                  className={`w-full px-3.5 py-2.5 rounded-lg border text-sm text-slate-900 focus:outline-none focus:ring-2 ${
-                    candidateFormErrors.name
-                      ? 'border-rose-400 focus:ring-rose-400 bg-rose-50/20'
-                      : 'border-slate-300 focus:ring-gov-navy'
-                  }`}
+                  className={`w-full px-3.5 py-2.5 rounded-lg border text-sm text-slate-900 focus:outline-none focus:ring-2 ${candidateFormErrors.name
+                    ? 'border-rose-400 focus:ring-rose-400 bg-rose-50/20'
+                    : 'border-slate-300 focus:ring-gov-navy'
+                    }`}
                   required
                 />
                 {candidateFormErrors.name && (
@@ -950,11 +944,10 @@ export default function SetupWizardPage() {
                         className: 'text-center',
                         render: (row) => (
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
-                              row.isMandatory
-                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                : 'bg-slate-100 text-slate-700'
-                            }`}
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${row.isMandatory
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                              : 'bg-slate-100 text-slate-700'
+                              }`}
                           >
                             {row.isMandatory ? 'Mandatory' : 'Desirable'}
                           </span>

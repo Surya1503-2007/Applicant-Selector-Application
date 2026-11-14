@@ -11,6 +11,7 @@ const candidateRoutes = require('./routes/candidateRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const questionRoutes = require('./routes/questionRoutes');
 
 const app = express();
 
@@ -47,7 +48,8 @@ app.use('/api', answerRoutes);
 app.use('/api', postRoutes);
 app.use('/api', candidateRoutes);
 app.use('/api', sessionRoutes);
-app.use('/api', interviewRoutes);
+app.use('/api/interviews', interviewRoutes);
+app.use('/api', questionRoutes);
 app.use('/api', reportRoutes);
 
 // Health check endpoint

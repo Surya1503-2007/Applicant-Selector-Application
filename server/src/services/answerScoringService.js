@@ -8,6 +8,7 @@ const prisma = require('../db/prismaClient');
 const questionService = require('./questionService');
 const sessionService = require('./sessionService');
 const activeScorer = require('../scorers');
+const { scoreIcebreaker } = require('../scorers/icebreakerScorer');
 const { VERDICTS, FLAGS } = require('../config/scorerConfig');
 
 /**
@@ -123,22 +124,26 @@ async function scoreAndSaveResponse(
     throw err;
   }
 
-  // Skip scoring for ICEBREAKER questions that have no idealAnswer
-  const isUnscoredIcebreaker =
-    question.levelTag === 'ICEBREAKER' &&
-    (!question.idealAnswer || question.idealAnswer.trim().length === 0);
+  // Handle ICEBREAKER questions: score them via icebreakerScorer (aspect keywords + word count)
+  if (question.levelTag === 'ICEBREAKER') {
+    const iceScoreResult = scoreIcebreaker({
+      answerText,
+      aspectKeywords: question.aspectKeywords || [],
+    });
 
-  if (isUnscoredIcebreaker) {
-    const notScoredBreakdown = {
-      matchedKeywords: [],
+    const icebreakerBreakdown = {
+      matchedKeywords: iceScoreResult.matchedAspects,
       partialKeywords: [],
-      missingKeywords: [],
-      keywordCoverage: null,
+      missingKeywords: iceScoreResult.missingAspects,
+      keywordCoverage: iceScoreResult.aspectCoverage,
       idealAnswerSimilarity: null,
       questionSimilarity: null,
       topicOverlap: null,
       flags: [FLAGS.NOT_SCORED],
-      reason: 'ICEBREAKER question without idealAnswer is stored without scoring.',
+      reason: 'ICEBREAKER question scored for warm-up aspect coverage and fluency without affecting technical ladder.',
+      icebreakerScore: iceScoreResult.icebreakerScore,
+      wordCount: iceScoreResult.wordCount,
+      aspectCoverage: iceScoreResult.aspectCoverage,
     };
 
     const saved = await saveResponseWithConflictHandling(
@@ -148,9 +153,9 @@ async function scoreAndSaveResponse(
       null,
       null,
       {
-        answerScore: null,
+        answerScore: null, // Remains null so technical score ignores it
         verdict: VERDICTS.NOT_SCORED,
-        breakdown: notScoredBreakdown,
+        breakdown: icebreakerBreakdown,
       },
       isReask
     );
@@ -163,7 +168,8 @@ async function scoreAndSaveResponse(
       correctness: null,
       answerScore: null,
       verdict: VERDICTS.NOT_SCORED,
-      breakdown: notScoredBreakdown,
+      breakdown: icebreakerBreakdown,
+      icebreakerScore: iceScoreResult.icebreakerScore,
     };
   }
 
@@ -175,6 +181,19 @@ async function scoreAndSaveResponse(
   // Run active scorer
   const scoringResult = await scorer.scoreAnswer({ question, answerText });
 
+  // Check if this was an expert-injected question; flag it in breakdown if so
+  const flags = scoringResult.breakdown?.flags ? [...scoringResult.breakdown.flags] : [];
+  if (question.source === 'EXPERT') {
+    if (!flags.includes('EXPERT_INJECTED')) {
+      flags.push('EXPERT_INJECTED');
+    }
+  }
+
+  const finalBreakdown = {
+    ...scoringResult.breakdown,
+    flags,
+  };
+
   // Persist using Part 1 addResponse()
   const saved = await saveResponseWithConflictHandling(
     sessionId,
@@ -185,7 +204,7 @@ async function scoreAndSaveResponse(
     {
       answerScore: scoringResult.answerScore,
       verdict: scoringResult.verdict,
-      breakdown: scoringResult.breakdown,
+      breakdown: finalBreakdown,
     },
     isReask
   );
@@ -198,7 +217,7 @@ async function scoreAndSaveResponse(
     correctness: scoringResult.correctness,
     answerScore: scoringResult.answerScore,
     verdict: scoringResult.verdict,
-    breakdown: scoringResult.breakdown,
+    breakdown: finalBreakdown,
   };
 }
 
