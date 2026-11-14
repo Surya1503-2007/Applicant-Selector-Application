@@ -18,7 +18,11 @@
     "test:decision": "node scripts/testDecisionLogic.js",
     "test:simulate": "node scripts/simulateInterview.js",
     "test:persistence": "node scripts/testScorePersistence.js",
-    "test:all": "npm run test:db && npm run test:persistence  && npm run test:skillmatch && npm run test:scorer && npm run test:decision && npm run test:simulate && npm run test:reportcalc && npm run test:qrelevancy && npm run test:reports"
+    "test:security": "node ../scripts/testCandidateProtection.js",
+    "test:icebreaker": "node ../scripts/testIcebreakers.js",
+    "test:expert": "node ../scripts/testExpertQuestions.js",
+    "test:multisubject": "node ../scripts/testMultiSubject.js",
+    "test:all": "npm run test:db && npm run test:persistence && npm run test:skillmatch && npm run test:scorer && npm run test:decision && npm run test:simulate && npm run test:reportcalc && npm run test:qrelevancy && npm run test:reports && npm run test:security && npm run test:icebreaker && npm run test:expert && npm run test:multisubject"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
