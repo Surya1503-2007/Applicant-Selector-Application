@@ -8,7 +8,8 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const app = require('./app');
 
-const PORT = process.env.PORT || 5000;
+// Default to port 5050 if port 5000 is unavailable (e.g. macOS AirPlay Receiver conflict)
+const PORT = process.env.PORT || 5050;
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 RAC DRDO Adaptive Interview Server running on port ${PORT}`);

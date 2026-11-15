@@ -92,6 +92,9 @@ module.exports = {
     WEIGHT_CANDIDATE: 0.5,
     WEIGHT_POST: 0.5,
     DEFAULT_MAX_SKILL_WEIGHT: 5,
+    // Aggregation mode: 'AVERAGE' (default arithmetic mean across items), 'TOP_K' (mean of top K highest match items), or 'MAX'
+    AGGREGATION_MODE: 'AVERAGE',
+    TOP_K_COUNT: 3,
     // Floor below which an individual technical question is flagged as LOW_FIT_QUESTION
     LOW_FIT_FLOOR: 0.4,
     // Session-level question relevancy percentage bands (0 to 100 scale)

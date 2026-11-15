@@ -288,6 +288,7 @@ async function getCurrentQuestion(sessionId) {
       sessionId,
       phase: sessionState.phase,
       isComplete: true,
+      interviewComplete: true,
       endReason: sessionState.endReason,
       question: null,
     };
@@ -309,6 +310,7 @@ async function getCurrentQuestion(sessionId) {
     sessionId,
     phase: sessionState.phase,
     isComplete: false,
+    interviewComplete: false,
     question: sanitizeQuestionForCandidate(question, isReask),
   };
 }
@@ -606,6 +608,7 @@ async function submitAnswer(sessionId, answerText) {
     },
     nextQuestion: sanitizeQuestionForCandidate(nextQuestionEntity, isNextReask),
     interviewComplete: isInterviewEnding,
+    isComplete: isInterviewEnding,
     endReason: isInterviewEnding && decision.end ? decision.end.reason : null,
   };
 }

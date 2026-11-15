@@ -127,9 +127,25 @@ function scoreQuestionRelevancy({
     };
   }
 
+  const aggregationMode = (relConfig.AGGREGATION_MODE || 'AVERAGE').toUpperCase();
+  const topKCount = relConfig.TOP_K_COUNT || 3;
+
+  function aggregateScores(scores) {
+    if (scores.length === 0) return 0.0;
+    if (aggregationMode === 'MAX') {
+      return Math.max(...scores);
+    }
+    if (aggregationMode === 'TOP_K') {
+      const sorted = [...scores].sort((a, b) => b - a);
+      const slice = sorted.slice(0, Math.min(topKCount, sorted.length));
+      return slice.reduce((sum, s) => sum + s, 0) / slice.length;
+    }
+    return scores.reduce((sum, s) => sum + s, 0) / scores.length;
+  }
+
   // 1. Candidate Fit
   const candidateMatches = [];
-  let totalCandScore = 0;
+  const candScores = [];
 
   for (const item of items) {
     let bestScore = 0.0;
@@ -143,15 +159,15 @@ function scoreQuestionRelevancy({
       }
     }
 
-    totalCandScore += bestScore;
+    candScores.push(bestScore);
     candidateMatches.push({ item, bestSkill, score: bestScore });
   }
 
-  const candidateFit = candSkills.length > 0 ? totalCandScore / items.length : 0.0;
+  const candidateFit = candSkills.length > 0 ? aggregateScores(candScores) : 0.0;
 
   // 2. Post Fit (weight-adjusted by skill weight)
   const postMatches = [];
-  let totalPostScore = 0;
+  const postScores = [];
   const maxConfigWeight = relConfig.DEFAULT_MAX_SKILL_WEIGHT || 5;
   const maxWeight = Math.max(
     ...pSkills.map((p) => p.weight),
@@ -175,7 +191,7 @@ function scoreQuestionRelevancy({
       }
     }
 
-    totalPostScore += bestWeightedScore;
+    postScores.push(bestWeightedScore);
     postMatches.push({
       item,
       bestSkill,
@@ -184,7 +200,7 @@ function scoreQuestionRelevancy({
     });
   }
 
-  const postFit = pSkills.length > 0 ? totalPostScore / items.length : 0.0;
+  const postFit = pSkills.length > 0 ? aggregateScores(postScores) : 0.0;
 
   // 3. Combined Question Relevancy (0..1)
   const rawRelevancy = wCand * candidateFit + wPost * postFit;
