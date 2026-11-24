@@ -23,6 +23,21 @@ export class ApiError extends Error {
   }
 }
 
+export async function login(username, password) {
+  return request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export async function fetchCurrentUser() {
+  return request('/auth/me');
+}
+
+export async function logout() {
+  return request('/auth/logout', { method: 'POST' });
+}
+
 /**
  * Internal helper for making fetch requests with JSON processing.
  *
@@ -41,6 +56,7 @@ async function request(endpoint, options = {}) {
 
   const config = {
     ...options,
+    credentials: 'include',
     headers: {
       ...defaultHeaders,
       ...options.headers,

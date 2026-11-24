@@ -5,8 +5,10 @@
 
 const express = require('express');
 const { scoreAndSaveResponse } = require('../services/answerScoringService');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+router.use(requireAuth(['ADMIN', 'EXAMINER']));
 
 /**
  * POST /api/answers

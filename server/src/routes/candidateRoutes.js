@@ -6,8 +6,10 @@
 const express = require('express');
 const prisma = require('../db/prismaClient');
 const sessionService = require('../services/sessionService');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+router.use(requireAuth(['ADMIN', 'EXAMINER']));
 
 /**
  * GET /api/candidates

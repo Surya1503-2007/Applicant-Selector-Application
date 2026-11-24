@@ -8,7 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const app = require('./app');
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5050;
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 RAC DRDO Adaptive Interview Server running on port ${PORT}`);

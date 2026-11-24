@@ -5,8 +5,10 @@
 
 const express = require('express');
 const interviewService = require('../services/interviewService');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+router.use(requireAuth(['ADMIN', 'EXAMINER']));
 
 /**
  * POST /api/interviews/start

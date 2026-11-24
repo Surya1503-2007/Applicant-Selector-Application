@@ -11,8 +11,10 @@ const {
   regenerateReport,
   getAllRankings,
 } = require('../services/reportService');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+router.use(requireAuth(['ADMIN', 'EXAMINER']));
 
 /**
  * GET /api/reports
@@ -99,7 +101,7 @@ router.post('/reports/:sessionId/override', async (req, res) => {
       newRecommendation: finalRecommendation,
       finalRecommendation,
       reason,
-      overriddenBy,
+      overriddenBy: req.user?.username || overriddenBy,
     });
     return res.status(200).json(result);
   } catch (error) {

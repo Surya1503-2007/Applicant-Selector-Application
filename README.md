@@ -251,7 +251,7 @@ Start the API server:
 
 ```bash
 npm start
-# Server listens on port 5000 (or process.env.PORT)
+# Server listens on port 5050 (or process.env.PORT)
 ```
 
 ### 1. Ingest Candidate Skills
@@ -259,7 +259,7 @@ npm start
 
 **cURL Request**:
 ```bash
-curl -X POST http://localhost:5000/api/candidates/<CANDIDATE_ID>/skills \
+curl -X POST http://localhost:5050/api/candidates/<CANDIDATE_ID>/skills \
   -H "Content-Type: application/json" \
   -d '{
     "skills": [
@@ -295,7 +295,7 @@ curl -X POST http://localhost:5000/api/candidates/<CANDIDATE_ID>/skills \
 
 **cURL Request**:
 ```bash
-curl -X POST http://localhost:5000/api/skill-match \
+curl -X POST http://localhost:5050/api/skill-match \
   -H "Content-Type: application/json" \
   -d '{
     "candidateId": "<CANDIDATE_ID>",
@@ -400,23 +400,23 @@ Both scripts assert the hard guarantees (no duplicate questions, difficulty only
 ### Sample API Flow (cURL)
 ```bash
 # 1️⃣ Start interview (candidate & post must exist)
-curl -X POST http://localhost:5000/api/interviews/start \
+curl -X POST http://localhost:5050/api/interviews/start \
   -H "Content-Type: application/json" \
   -d '{"candidateId":"<candidate-id>","postId":"<post-id>"}'
 
 # 2️⃣ Get current question
-curl http://localhost:5000/api/interviews/<session-id>/question
+curl http://localhost:5050/api/interviews/<session-id>/question
 
 # 3️⃣ Submit answer
-curl -X POST http://localhost:5000/api/interviews/<session-id>/answer \
+curl -X POST http://localhost:5050/api/interviews/<session-id>/answer \
   -H "Content-Type: application/json" \
   -d '{"answerText":"my answer"}'
 
 # 4️⃣ Fetch interview state (includes decision log & end reason)
-curl http://localhost:5000/api/interviews/<session-id>/state
+curl http://localhost:5050/api/interviews/<session-id>/state
 
 # 5️⃣ End interview early (optional)
-curl -X POST http://localhost:5000/api/interviews/<session-id>/end \
+curl -X POST http://localhost:5050/api/interviews/<session-id>/end \
   -H "Content-Type: application/json" \
   -d '{"reason":"CANDIDATE_STRUGGLING"}'
 ```
@@ -488,7 +488,7 @@ All scoring logic lives in `server/src/scorers/logicScorer.js`, driven exclusive
 
 **cURL Request**:
 ```bash
-curl -X POST http://localhost:5000/api/answers \
+curl -X POST http://localhost:5050/api/answers \
   -H "Content-Type: application/json" \
   -d '{
     "sessionId": "<SESSION_ID>",
@@ -654,16 +654,16 @@ npm run test:reports
 
 ```bash
 # 1. Generate Report for a completed session (idempotent, reject if ACTIVE)
-curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report \
+curl -X POST http://localhost:5050/api/interviews/<SESSION_ID>/report \
   -H "Content-Type: application/json" \
   -d '{"regenerate": false}'
 
 # 2. Retrieve Full Assessment Report (latest or specific version)
-curl http://localhost:5000/api/interviews/<SESSION_ID>/report
-curl "http://localhost:5000/api/interviews/<SESSION_ID>/report?version=1"
+curl http://localhost:5050/api/interviews/<SESSION_ID>/report
+curl "http://localhost:5050/api/interviews/<SESSION_ID>/report?version=1"
 
 # 3. Assessment Board Recommendation Override (reason is mandatory)
-curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report/override \
+curl -X POST http://localhost:5050/api/interviews/<SESSION_ID>/report/override \
   -H "Content-Type: application/json" \
   -d '{
     "newRecommendation": "BORDERLINE",
@@ -673,12 +673,12 @@ curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report/override \
   }'
 
 # 4. Add or Update Board Remarks
-curl -X POST http://localhost:5000/api/interviews/<SESSION_ID>/report/remarks \
+curl -X POST http://localhost:5050/api/interviews/<SESSION_ID>/report/remarks \
   -H "Content-Type: application/json" \
   -d '{"remarks": "Board unanimously cleared candidate for Scientist C - ASD."}'
 
 # 5. List Candidate Rankings (filterable by postId and finalRecommendation)
-curl "http://localhost:5000/api/reports?postId=post-asd-sc-c&recommendation=SUITABLE"
+curl "http://localhost:5050/api/reports?postId=post-asd-sc-c&recommendation=SUITABLE"
 ```
 
 ### How to Change Weights and Thresholds
@@ -721,8 +721,8 @@ QUESTION_RELEVANCY: {
 
 | Command | Description |
 | :--- | :--- |
-| `npm run dev` | Starts backend (port 5000) and frontend (port 5173) together using `concurrently` |
-| `npm start` | Launches the Express API server on port 5000 |
+| `npm run dev` | Starts backend (port 5050) and frontend (port 5173) together using `concurrently` |
+| `npm start` | Launches the Express API server on port 5050 |
 | `npm run client:dev` | Launches the Vite React frontend development server on port 5173 |
 | `npm run client:build` | Compiles production frontend bundle using Vite + Tailwind |
 | `npm run client:preview` | Previews the compiled production build locally |
@@ -772,7 +772,7 @@ cd client && npm install && cd ..
 ```
 
 #### Step 3: Run Both Applications Simultaneously
-Run backend (port 5000) and frontend (port 5173) concurrently in a single terminal:
+Run backend (port 5050) and frontend (port 5173) concurrently in a single terminal:
 ```bash
 npm run dev
 ```
@@ -796,14 +796,14 @@ Open your browser at `http://localhost:5173`.
 Create `client/.env` (example provided in `client/.env.example`):
 ```env
 # Centralized API base URL pointing to the Express server
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5050/api
 ```
 
 #### Server Configuration (`server/.env`)
 ```env
 # PostgreSQL database connection URL
 DATABASE_URL="postgresql://postgres:password@localhost:5432/rac_interview_db?schema=public"
-PORT=5000
+PORT=5050
 ```
 
 ---

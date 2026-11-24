@@ -4,8 +4,9 @@
  * Provides application routing, header, layout containers, and footer.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { fetchCurrentUser } from './api/client';
 import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
 import SetupWizardPage from './pages/SetupWizardPage';
@@ -14,6 +15,7 @@ import CompletionPage from './pages/CompletionPage';
 import ReportPage from './pages/ReportPage';
 import RankingsPage from './pages/RankingsPage';
 import AdminSubjectsPage from './pages/AdminSubjectsPage';
+import LoginPage from './pages/LoginPage';
 
 function NotFoundPage() {
   return (
@@ -40,8 +42,25 @@ function NotFoundPage() {
 }
 
 export default function App() {
+  const [auth, setAuth] = useState({ loading: true, user: null });
+
+  useEffect(() => {
+    fetchCurrentUser()
+      .then((data) => setAuth({ loading: false, user: data.user }))
+      .catch(() => setAuth({ loading: false, user: null }));
+  }, []);
+
+  if (auth.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-sm font-semibold text-slate-600">Verifying boardroom session...</div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
+      {auth.user ? (
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
         {/* Government Boardroom Top Header */}
         <Header />
@@ -75,6 +94,9 @@ export default function App() {
           </div>
         </footer>
       </div>
+      ) : (
+        <LoginPage onLogin={(user) => setAuth({ loading: false, user })} />
+      )}
     </BrowserRouter>
   );
 }

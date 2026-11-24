@@ -5,8 +5,10 @@
 
 const express = require('express');
 const { computeSkillMatch, addCandidateSkills, getLatestSkillMatch } = require('../services/skillMatchService');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+router.use(requireAuth(['ADMIN', 'EXAMINER']));
 
 /**
  * POST /api/skill-match

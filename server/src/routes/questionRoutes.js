@@ -7,8 +7,10 @@
 const express = require('express');
 const prisma = require('../db/prismaClient');
 const { scoreQuestionRelevancy, determineRelevancyBand } = require('../reports/questionRelevancy');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+router.use(requireAuth(['ADMIN', 'EXAMINER']));
 
 /**
  * GET /api/questions

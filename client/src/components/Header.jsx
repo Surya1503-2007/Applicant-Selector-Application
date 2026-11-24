@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { logout } from '../api/client';
 
 export default function Header() {
   const location = useLocation();
@@ -82,6 +83,16 @@ export default function Header() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true" />
               <span className="font-semibold text-slate-200">Boardroom Terminal</span>
             </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await logout().catch(() => {});
+                window.location.assign('/');
+              }}
+              className="px-2.5 py-1.5 rounded border border-slate-700 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </div>
